@@ -30,11 +30,19 @@ const validatePantryItem = [
   body("expiryDate")
     .optional()
     .isISO8601()
-    .withMessage("Expiry date must be a valid date (YYYY-MM-DD)"),
+    .withMessage("Expiry date must be a valid date (YYYY-MM-DD)")
+    .custom((value) => {
+      const today = new Date();
+      const expiry = new Date(value);
 
-    validate
+      if (expiry < today) {
+        throw new Error("Expiry date cannot be in the past");
+      }
+      return true;
+    }),
+  validate,
 ];
 
 module.exports = {
-    validatePantryItem
-}
+  validatePantryItem,
+};
