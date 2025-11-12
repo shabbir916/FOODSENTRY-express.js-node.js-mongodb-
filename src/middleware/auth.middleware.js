@@ -18,14 +18,13 @@ async function authUser(req, res, next) {
 
     req.user = user;
 
-    next()
-    
+    next();
   } catch (error) {
     res.status(401).json({
       success: false,
-      message: "Unauthorized User",
+      message: "Unauthorized User, Invalid token",
     });
   }
 }
 
-module.exports = authUser
+module.exports = authUser;

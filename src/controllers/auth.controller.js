@@ -89,7 +89,7 @@ async function fetchUserProfile(req, res) {
   try {
     const userId = req.user?._id;
 
-    const UserProfile = await userModel.findById(userId).select("-password");
+    const UserProfile = await userModel.find(userId).select("-password");
 
     return res.status(200).json({
       success: true,
@@ -106,6 +106,7 @@ async function fetchUserProfile(req, res) {
 
 async function updateUserProfile(req, res) {
   try {
+    const userId = req.user?._id;
     const { id } = req.params;
     const updates = req.body;
 
@@ -121,7 +122,7 @@ async function updateUserProfile(req, res) {
       });
     }
 
-     if (id !== req.user._id.toString()) {
+    if (id !== userId.toString()) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized! You can update only your own profile.",

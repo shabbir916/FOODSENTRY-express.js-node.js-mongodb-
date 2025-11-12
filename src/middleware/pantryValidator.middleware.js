@@ -43,6 +43,39 @@ const validatePantryItem = [
   validate,
 ];
 
+const validateUpdatePantryItem = [
+  body("name")
+    .optional()
+    .trim()
+    .isString()
+    .withMessage("Item name must be a string"),
+
+  body("category")
+    .optional()
+    .isString()
+    .withMessage("Category must be a string"),
+
+  body("quantity")
+    .optional()
+    .isString("Quantity must be text format like '2 kg' or '3 packs'"),
+
+  body("expiryDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Expiry date must be a valid date (YYYY-MM-DD)")
+    .custom((value) => {
+      const today = new Date();
+      const expiry = new Date(value);
+
+      if (expiry < today) {
+        throw new Error("Expiry date cannot be in the past");
+      }
+      return true;
+    }),
+  validate,
+];
+
 module.exports = {
   validatePantryItem,
+  validateUpdatePantryItem,
 };
