@@ -1,4 +1,5 @@
 const pantryModel = require("../models/pantry.model");
+const { getExpiringItems } = require("../utils/expiryHelper");
 
 async function addItem(req, res) {
   try {
@@ -157,17 +158,7 @@ async function expiringSoon(req, res) {
   try {
     const userId = req.user?._id;
 
-    const today = new Date();
-    const upcomingDate = new Date();
-    upcomingDate.setDate(today.getDate() + 7);
-
-    const expiringItems = await pantryModel.find({
-      user: userId,
-      expiryDate: {
-        $gte: new Date(today),
-        $lte: new Date(upcomingDate),
-      },
-    });
+    const expiringItems = await getExpiringItems(userId);
 
     return res.status(200).json({
       success: true,
