@@ -64,6 +64,7 @@ function initSocketServer(httpServer) {
       const response = await aiService.generateRecipesSuggestion({ingredients:ingredients, userPrompt:prompt});
       
       console.log("AI Response:",response);
+      
       socket.emit("ai-response", {
         content: response,
         ingredients,

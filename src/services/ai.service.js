@@ -6,11 +6,13 @@ const ai = new GoogleGenAI({});
 async function generateRecipesSuggestion({ ingredients, userPrompt }) {
   const response = await ai.models.generateContent({
     model: "gemini-2.0-flash",
-    contents: `Here are the user's pantry items: ${ingredients.join(", ")}
-      User query: ${userPrompt}
-
-      Suggest 3 recipes where expiring items are used first.
-    `,
+    contents: {
+      role: "user",
+      parts: [
+        { text: `Pantry ingredients: ${ingredients.join(", ")}` },
+        { text: `User question: ${userPrompt}` },
+      ],
+    },
     config: {
       temperature: 0.7,
       systemInstruction: `
