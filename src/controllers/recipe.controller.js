@@ -5,10 +5,10 @@ const pantryModel = require("../models/pantry.model");
 async function suggestRecipe(req, res) {
   try {
     const userId = req.user?._id;
-
-    const expiringItems = await getExpiringItems(userId);
-
+    
     // Fetch expiring items
+    const expiringItems = await getExpiringItems(userId);
+    
     if (!expiringItems) {
       return res.status(404).json({
         success: false,
