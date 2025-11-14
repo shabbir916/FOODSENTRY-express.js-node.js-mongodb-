@@ -2,6 +2,9 @@ const { Server } = require("socket.io");
 const cookie = require("cookie");
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/user.model");
+const pantryModel = require("../models/pantry.model");
+const aiService = require("../services/ai.service");
+const { getExpiringItems } = require("../utils/expiryHelper");
 
 function initSocketServer(httpServer) {
   const io = new Server(httpServer, {});
@@ -25,8 +28,47 @@ function initSocketServer(httpServer) {
     }
   });
 
-  io.on("connection", (Socket) => {
-    console.log("New Socket Connection:", Socket.id);
+  io.on("connection", (socket) => {
+    // console.log("user Connected:", Socket.user)
+    // console.log("New Socket Connection:", Socket.id);
+
+    socket.on("ai-message", async (messagePayload) => {
+      console.log(messagePayload);
+
+      const expiringItems = await getExpiringItems(messagePayload.userId);
+      const allPantryItems = await pantryModel.find({
+        user: messagePayload.userId,
+      });
+
+      const expiryIngredients = expiringItems.map((item) =>
+        item.name.trim().toLocaleLowerCase()
+      );
+      const pantryIngredients = allPantryItems.map((item) =>
+        item.name.trim().toLocaleLowerCase()
+      );
+
+      const ingredients = [
+        ...new Set([...expiryIngredients, ...pantryIngredients]),
+      ];
+
+      console.log("🧾 Ingredients going to AI:", ingredients);
+
+      // Build AI prompt
+      const prompt = `
+    My pantry contains these items: ${pantryIngredients.join(", ")}.
+    These items are expiring soon: ${expiryIngredients.join(", ")}.
+    Based on these, suggest some recipes.
+    User message: "${messagePayload.content}"
+  `;
+
+      const response = await aiService.generateRecipesSuggestion({ingredients:ingredients, userPrompt:prompt});
+      
+      console.log("AI Response:",response);
+      socket.emit("ai-response", {
+        content: response,
+        ingredients,
+      });
+    });
   });
 }
 
