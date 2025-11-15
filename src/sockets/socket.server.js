@@ -3,6 +3,7 @@ const cookie = require("cookie");
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/user.model");
 const pantryModel = require("../models/pantry.model");
+const chatModel = require("../models/chat.model");
 const aiService = require("../services/ai.service");
 const { getExpiringItems } = require("../utils/expiryHelper");
 
@@ -35,6 +36,21 @@ function initSocketServer(httpServer) {
     socket.on("ai-message", async (messagePayload) => {
       console.log(messagePayload);
 
+      let chat = await chatModel.findOne({
+        user: socket.user._id,
+        isActive: true,
+      });
+
+      if (!chat) {
+        chat = await chatModel.create({ user: socket.user._id });
+      }
+
+      chat.messages.push({
+        role: "user",
+        content: messagePayload.content,
+      });
+      await chat.save();
+
       const expiringItems = await getExpiringItems(messagePayload.userId);
       const allPantryItems = await pantryModel.find({
         user: messagePayload.userId,
@@ -61,10 +77,19 @@ function initSocketServer(httpServer) {
     User message: "${messagePayload.content}"
   `;
 
-      const response = await aiService.generateRecipesSuggestion({ingredients:ingredients, userPrompt:prompt});
-      
-      console.log("AI Response:",response);
-      
+      const response = await aiService.generateRecipesSuggestion({
+        ingredients: ingredients,
+        userPrompt: prompt,
+      });
+
+      chat.messages.push({
+        role: "model",
+        content: response,
+      });
+      await chat.save();
+
+      console.log("AI Response:", response);
+
       socket.emit("ai-response", {
         content: response,
         ingredients,
