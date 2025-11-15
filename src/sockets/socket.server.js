@@ -36,13 +36,15 @@ function initSocketServer(httpServer) {
     socket.on("ai-message", async (messagePayload) => {
       console.log(messagePayload);
 
+       const userId = socket.user._id;
+
       let chat = await chatModel.findOne({
-        user: socket.user._id,
+        user: userId,
         isActive: true,
       });
 
       if (!chat) {
-        chat = await chatModel.create({ user: socket.user._id });
+        chat = await chatModel.create({ user:userId });
       }
 
       chat.messages.push({
@@ -51,9 +53,16 @@ function initSocketServer(httpServer) {
       });
       await chat.save();
 
-      const expiringItems = await getExpiringItems(messagePayload.userId);
+      const recentMessages = chat.messages.slice(-10);
+
+      const stm = recentMessages.map((m) => ({
+        role: m.role,
+        parts: [{ text: m.content }],
+      }));
+
+      const expiringItems = await getExpiringItems(userId);
       const allPantryItems = await pantryModel.find({
-        user: messagePayload.userId,
+        user:userId,
       });
 
       const expiryIngredients = expiringItems.map((item) =>
@@ -78,6 +87,7 @@ function initSocketServer(httpServer) {
   `;
 
       const response = await aiService.generateRecipesSuggestion({
+        stm,
         ingredients: ingredients,
         userPrompt: prompt,
       });
