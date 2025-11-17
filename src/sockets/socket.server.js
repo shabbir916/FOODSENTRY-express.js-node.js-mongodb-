@@ -30,29 +30,30 @@ function initSocketServer(httpServer) {
   });
 
   io.on("connection", (socket) => {
-    // console.log("user Connected:", Socket.user)
-    // console.log("New Socket Connection:", Socket.id);
-
     socket.on("ai-message", async (messagePayload) => {
-      console.log(messagePayload);
+      console.log("📥 Incoming:", messagePayload);
 
-       const userId = socket.user._id;
+      const userId = socket.user._id;
 
-      let chat = await chatModel.findOne({
-        user: userId,
-        isActive: true,
-      });
+      // -----------------------------------------------------------------------
+      // 1️⃣ Find or create chat session
+      // -----------------------------------------------------------------------
+      let chat = await chatModel.findOne({ user: userId, isActive: true });
 
       if (!chat) {
-        chat = await chatModel.create({ user:userId });
+        chat = await chatModel.create({ user: userId });
       }
 
+      // Save user message
       chat.messages.push({
         role: "user",
         content: messagePayload.content,
       });
       await chat.save();
 
+      // -----------------------------------------------------------------------
+      // 2️⃣ Prepare STM (last 10 messages)
+      // -----------------------------------------------------------------------
       const recentMessages = chat.messages.slice(-10);
 
       const stm = recentMessages.map((m) => ({
@@ -60,49 +61,111 @@ function initSocketServer(httpServer) {
         parts: [{ text: m.content }],
       }));
 
+      // -----------------------------------------------------------------------
+      // 3️⃣ Fetch pantry + expiring ingredients
+      // -----------------------------------------------------------------------
       const expiringItems = await getExpiringItems(userId);
-      const allPantryItems = await pantryModel.find({
-        user:userId,
-      });
+      const allPantryItems = await pantryModel.find({ user: userId });
 
       const expiryIngredients = expiringItems.map((item) =>
-        item.name.trim().toLocaleLowerCase()
-      );
-      const pantryIngredients = allPantryItems.map((item) =>
-        item.name.trim().toLocaleLowerCase()
+        item.name.trim().toLowerCase()
       );
 
-      const ingredients = [
+      const pantryIngredients = allPantryItems.map((item) =>
+        item.name.trim().toLowerCase()
+      );
+
+      let ingredients = [
         ...new Set([...expiryIngredients, ...pantryIngredients]),
       ];
 
-      console.log("🧾 Ingredients going to AI:", ingredients);
+      console.log("🧾 Ingredients BEFORE filtering:", ingredients);
 
-      // Build AI prompt
-      const prompt = `
-    My pantry contains these items: ${pantryIngredients.join(", ")}.
-    These items are expiring soon: ${expiryIngredients.join(", ")}.
-    Based on these, suggest some recipes.
-    User message: "${messagePayload.content}"
-  `;
+      // -----------------------------------------------------------------------
+      // 4️⃣ Detect ingredients user wants to AVOID
+      // -----------------------------------------------------------------------
+      const userText = messagePayload.content.toLowerCase();
 
-      const response = await aiService.generateRecipesSuggestion({
-        stm,
-        ingredients: ingredients,
-        userPrompt: prompt,
+      const avoidPatterns = [
+        "no ",
+        "without ",
+        "avoid ",
+        "don't use ",
+        "do not use ",
+        "mat ",
+        "nahi ",
+        "not include ",
+        "skip ",
+        "remove ",
+        "except ",
+      ];
+
+      let avoidItems = [];
+
+      ingredients.forEach((item) => {
+        avoidPatterns.forEach((pattern) => {
+          if (userText.includes(pattern + item)) {
+            avoidItems.push(item);
+          }
+        });
       });
 
+      avoidItems = [...new Set(avoidItems)];
+
+      console.log("🚫 Avoid Items Detected:", avoidItems);
+
+      // -----------------------------------------------------------------------
+      // 5️⃣ Remove avoid items from ingredients
+      // -----------------------------------------------------------------------
+      if (avoidItems.length > 0) {
+        ingredients = ingredients.filter((i) => !avoidItems.includes(i));
+      }
+
+      console.log("🧾 Ingredients AFTER filtering:", ingredients);
+
+      // -----------------------------------------------------------------------
+      // 6️⃣ Build AI prompt
+      // -----------------------------------------------------------------------
+      const prompt = `
+Your task:
+- Suggest realistic recipes using ONLY the available ingredients.
+- The user wants to AVOID these items: ${avoidItems.join(", ") || "none"}.
+- Use PANTRY items: ${pantryIngredients.join(", ")}.
+- PRIORITIZE expiring items: ${expiryIngredients.join(", ")}.
+- Never include avoided ingredients.
+
+User message: "${messagePayload.content}"
+    `;
+
+      // -----------------------------------------------------------------------
+      // 7️⃣ Get AI response
+      // -----------------------------------------------------------------------
+      const response = await aiService.generateRecipesSuggestion({
+        stm,
+        ingredients,
+        userPrompt: prompt,
+        avoidItems,
+      });
+
+      // -----------------------------------------------------------------------
+      // 8️⃣ Save AI message
+      // -----------------------------------------------------------------------
       chat.messages.push({
         role: "model",
         content: response,
       });
+
       await chat.save();
 
-      console.log("AI Response:", response);
+      console.log("🤖 AI Response:", response);
 
+      // -----------------------------------------------------------------------
+      // 9️⃣ Send response back to frontend
+      // -----------------------------------------------------------------------
       socket.emit("ai-response", {
         content: response,
         ingredients,
+        avoidItems,
       });
     });
   });
