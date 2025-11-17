@@ -35,9 +35,8 @@ function initSocketServer(httpServer) {
 
       const userId = socket.user._id;
 
-      // -----------------------------------------------------------------------
-      // 1️⃣ Find or create chat session
-      // -----------------------------------------------------------------------
+      // Find or create chat session
+
       let chat = await chatModel.findOne({ user: userId, isActive: true });
 
       if (!chat) {
@@ -51,9 +50,8 @@ function initSocketServer(httpServer) {
       });
       await chat.save();
 
-      // -----------------------------------------------------------------------
-      // 2️⃣ Prepare STM (last 10 messages)
-      // -----------------------------------------------------------------------
+      // STM (last 10 messages)
+
       const recentMessages = chat.messages.slice(-10);
 
       const stm = recentMessages.map((m) => ({
@@ -61,9 +59,8 @@ function initSocketServer(httpServer) {
         parts: [{ text: m.content }],
       }));
 
-      // -----------------------------------------------------------------------
       // 3️⃣ Fetch pantry + expiring ingredients
-      // -----------------------------------------------------------------------
+
       const expiringItems = await getExpiringItems(userId);
       const allPantryItems = await pantryModel.find({ user: userId });
 
@@ -81,9 +78,9 @@ function initSocketServer(httpServer) {
 
       console.log("🧾 Ingredients BEFORE filtering:", ingredients);
 
-      // -----------------------------------------------------------------------
-      // 4️⃣ Detect ingredients user wants to AVOID
-      // -----------------------------------------------------------------------
+      
+      // Aviod Ingredients
+      
       const userText = messagePayload.content.toLowerCase();
 
       const avoidPatterns = [
@@ -114,18 +111,18 @@ function initSocketServer(httpServer) {
 
       console.log("🚫 Avoid Items Detected:", avoidItems);
 
-      // -----------------------------------------------------------------------
-      // 5️⃣ Remove avoid items from ingredients
-      // -----------------------------------------------------------------------
+      
+      //  Remove avoid items from ingredients
+      
       if (avoidItems.length > 0) {
         ingredients = ingredients.filter((i) => !avoidItems.includes(i));
       }
 
       console.log("🧾 Ingredients AFTER filtering:", ingredients);
 
-      // -----------------------------------------------------------------------
-      // 6️⃣ Build AI prompt
-      // -----------------------------------------------------------------------
+      
+      // Build AI prompt
+      
       const prompt = `
 Your task:
 - Suggest realistic recipes using ONLY the available ingredients.
@@ -137,9 +134,9 @@ Your task:
 User message: "${messagePayload.content}"
     `;
 
-      // -----------------------------------------------------------------------
-      // 7️⃣ Get AI response
-      // -----------------------------------------------------------------------
+      
+      // Get AI response
+      
       const response = await aiService.generateRecipesSuggestion({
         stm,
         ingredients,
@@ -147,9 +144,9 @@ User message: "${messagePayload.content}"
         avoidItems,
       });
 
-      // -----------------------------------------------------------------------
-      // 8️⃣ Save AI message
-      // -----------------------------------------------------------------------
+      
+      // Save AI message
+      
       chat.messages.push({
         role: "model",
         content: response,
@@ -159,9 +156,9 @@ User message: "${messagePayload.content}"
 
       console.log("🤖 AI Response:", response);
 
-      // -----------------------------------------------------------------------
-      // 9️⃣ Send response back to frontend
-      // -----------------------------------------------------------------------
+      
+      // Send response back to frontend
+      
       socket.emit("ai-response", {
         content: response,
         ingredients,
