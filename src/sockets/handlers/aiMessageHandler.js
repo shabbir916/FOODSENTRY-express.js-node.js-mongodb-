@@ -9,7 +9,7 @@ const detectAvoidItems = require("../../utils/avoidItemDetector");
 const buildPrompt = require("../../utils/promptBuilder");
 
 async function handleAIMessage(socket, messagePayload) {
-  console.log("📥 Incoming:", messagePayload);
+  console.log("Incoming:", messagePayload);
 
   const userId = socket.user._id;
 
@@ -36,19 +36,19 @@ async function handleAIMessage(socket, messagePayload) {
   const pantryIngredients = ingredientsData.pantryIngredients;
   const expiryIngredients = ingredientsData.expiryIngredients;
 
-  console.log("🧾 Ingredients BEFORE filtering:", ingredients);
+  console.log("Ingredients BEFORE filtering:", ingredients);
 
   // 4) Detect avoid ingredients
   const avoidItems = detectAvoidItems(messagePayload.content, ingredients);
 
-  console.log("🚫 Avoid Items Detected:", avoidItems);
+  console.log("Avoid Items Detected:", avoidItems);
 
   // 5) Remove avoid items
   if (avoidItems.length > 0) {
     ingredients = ingredients.filter((i) => !avoidItems.includes(i));
   }
 
-  console.log("🧾 Ingredients AFTER filtering:", ingredients);
+  console.log("Ingredients AFTER filtering:", ingredients);
 
   // 6) Prompt
   const prompt = buildPrompt({
@@ -74,7 +74,7 @@ async function handleAIMessage(socket, messagePayload) {
 
   await chat.save();
 
-  console.log("🤖 AI Response:", response);
+  console.log("AI Response:", response);
 
   // Final object to socket.emit
   return {
