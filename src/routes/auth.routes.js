@@ -39,6 +39,9 @@ router.patch(
   chnagePasswordValidation,
   changePassword
 );
-router.post("/logout",authUser,logoutUser)
+router.post("/logout", authUser, logoutUser);
+router.post("/forget-password",forgetPassword);
+router.post("/verify-otp",verfiyOTP);
+router.post("/reset-password",resetPassword);
 
 module.exports = router;
