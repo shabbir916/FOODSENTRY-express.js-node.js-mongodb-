@@ -1,6 +1,8 @@
 const userModel = require("../models/user.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const sendEmail = require("../utils/sendEmail");
+const generateOTP = require("../utils/generateOTP");
 
 async function registerUser(req, res) {
   try {
@@ -198,6 +200,56 @@ async function logoutUser(req, res) {
   }
 }
 
+async function forgetPassword(req, res) {
+  try {
+    const { email } = req.body;
+
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "No user found with this email",
+      });
+    }
+
+    // 1) Generate OTP
+    const otp = generateOTP();
+
+    const hashedOTP = await bcrypt.hash(otp,10);
+    
+    user.otp = hashedOTP;
+    user.otpExpiry = Date.now() + 5 * 60 * 1000; // 5 min
+
+    await user.save();
+
+    console.log("Generated OTP:", otp);
+
+    // 2) Send Email
+    await sendEmail(
+      {
+      to:user.email,
+      subject:"Your FOODSENTRY Password Reset OTP",
+      text:`Your OTP is: ${otp}`,
+      html:`<h3>Your OTP is: <b>${otp}</b></h3><p>Valid for 5 minutes</p>`}
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully to your email",
+    });
+  } catch (error) {
+    console.log("Forget Password Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server Error while sending OTP",
+    });
+  }
+}
+
+module.exports = forgetPassword;
+
 module.exports = {
   registerUser,
   loginUser,
@@ -205,4 +257,5 @@ module.exports = {
   fetchUserProfile,
   updateUserProfile,
   changePassword,
+  forgetPassword,
 };
