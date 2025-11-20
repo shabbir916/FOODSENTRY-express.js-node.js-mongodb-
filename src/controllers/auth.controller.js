@@ -216,8 +216,8 @@ async function forgetPassword(req, res) {
     // 1) Generate OTP
     const otp = generateOTP();
 
-    const hashedOTP = await bcrypt.hash(otp,10);
-    
+    const hashedOTP = await bcrypt.hash(otp, 10);
+
     user.otp = hashedOTP;
     user.otpExpiry = Date.now() + 5 * 60 * 1000; // 5 min
 
@@ -226,13 +226,12 @@ async function forgetPassword(req, res) {
     console.log("Generated OTP:", otp);
 
     // 2) Send Email
-    await sendEmail(
-      {
-      to:user.email,
-      subject:"Your FOODSENTRY Password Reset OTP",
-      text:`Your OTP is: ${otp}`,
-      html:`<h3>Your OTP is: <b>${otp}</b></h3><p>Valid for 5 minutes</p>`}
-    );
+    await sendEmail({
+      to: user.email,
+      subject: "Your FOODSENTRY Password Reset OTP",
+      text: `Your OTP is: ${otp}`,
+      html: `<h3>Your OTP is: <b>${otp}</b></h3><p>Valid for 5 minutes</p>`,
+    });
 
     return res.status(200).json({
       success: true,
@@ -248,6 +247,51 @@ async function forgetPassword(req, res) {
   }
 }
 
+async function verfiyOTP(req, res) {
+  const { email, otp } = req.body;
+
+  const user = await userModel.findOne({ email });
+
+  if (!user) {
+    return res.status(400).json({
+      success: false,
+      message: "User not found with this email.",
+    });
+  }
+
+  if (!user.otp) {
+    return res.status(400).json({
+      success: false,
+      message: "OTP not available. Please generate a new OTP.",
+    });
+  }
+
+  if (Date.now() > user.otpExpiry) {
+    return res.status(400).json({
+      success: false,
+      message: "OTP Expired. Please generate a new OTP.",
+    });
+  }
+
+  const isMatch = await bcrypt.compare(otp, user.otp);
+
+  if (!isMatch) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid OTP",
+    });
+  }
+
+  (user.otp = null), (user.otpExpiry = null);
+
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "OTP Verified Successfully",
+  });
+}
+
 module.exports = forgetPassword;
 
 module.exports = {
@@ -258,4 +302,5 @@ module.exports = {
   updateUserProfile,
   changePassword,
   forgetPassword,
+  verfiyOTP,
 };
