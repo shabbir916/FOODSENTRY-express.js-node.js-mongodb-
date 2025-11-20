@@ -7,7 +7,8 @@ const {
   updateUserProfile,
   changePassword,
   forgetPassword,
-  verfiyOTP
+  verfiyOTP,
+  resetPassword
 } = require("../controllers/auth.controller");
 const authUser = require("../middleware/auth.middleware");
 const rateLimit = require("express-rate-limit");
@@ -16,6 +17,7 @@ const {
   registrationValidation,
   userUpdateValidation,
   chnagePasswordValidation,
+  resetPasswordValidator
 } = require("../middleware/userValidator.middleware");
 
 const router = express.Router();
@@ -44,6 +46,6 @@ router.patch(
 router.post("/logout", authUser, logoutUser);
 router.post("/forget-password",forgetPassword);
 router.post("/verify-otp",verfiyOTP);
-// router.post("/reset-password",resetPassword);
+router.post("/reset-password",resetPasswordValidator,resetPassword);
 
 module.exports = router;

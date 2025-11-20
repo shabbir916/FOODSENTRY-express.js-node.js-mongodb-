@@ -259,6 +259,7 @@ async function verfiyOTP(req, res) {
     });
   }
 
+  // OTP missing
   if (!user.otp) {
     return res.status(400).json({
       success: false,
@@ -266,6 +267,7 @@ async function verfiyOTP(req, res) {
     });
   }
 
+  // OTP expired
   if (Date.now() > user.otpExpiry) {
     return res.status(400).json({
       success: false,
@@ -273,8 +275,8 @@ async function verfiyOTP(req, res) {
     });
   }
 
+  // Match OTP
   const isMatch = await bcrypt.compare(otp, user.otp);
-
   if (!isMatch) {
     return res.status(400).json({
       success: false,
@@ -282,9 +284,14 @@ async function verfiyOTP(req, res) {
     });
   }
 
-  (user.otp = null), (user.otpExpiry = null);
+  // OTP VERIFIED SUCCESSFULLY
+  user.otpVerified = true;
+  user.otp = null;
+  user.otpExpiry = null;
 
   await user.save();
+
+  console.log("VERIFY OTP USER:", user);
 
   return res.status(200).json({
     success: true,
@@ -292,7 +299,42 @@ async function verfiyOTP(req, res) {
   });
 }
 
-module.exports = forgetPassword;
+async function resetPassword(req, res) {
+  const { email, newPassword, confirmNewPassword } = req.body;
+
+  const user = await userModel.findOne({ email });
+
+  if (!user) {
+    return res.status(400).json({
+      success: false,
+      message: "User not found with this email",
+    });
+  }
+
+  console.log("RESET PASSWORD USER:", user);
+
+  // OTP must be verified before resetting password
+  if (!user.otpVerified) {
+    return res.status(400).json({
+      success: false,
+      message: "Please verify OTP first",
+    });
+  }
+
+  // RESET PASSWORD
+  const hashNewPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashNewPassword;
+
+  // Prevent reusing OTP verification
+  user.otpVerified = false;
+
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Password Reset Successfully",
+  });
+}
 
 module.exports = {
   registerUser,
@@ -303,4 +345,5 @@ module.exports = {
   changePassword,
   forgetPassword,
   verfiyOTP,
+  resetPassword,
 };
