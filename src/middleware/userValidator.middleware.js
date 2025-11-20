@@ -55,12 +55,37 @@ const chnagePasswordValidation = [
   body("oldPassword").notEmpty().withMessage("Old Password is required"),
 
   body("newPassword")
-    .isLength({ min: 3 })
+    .isLength({ min: 6 })
     .withMessage("New Password must be atleast 6 Characters long"),
+
+  validate,
+];
+
+const resetPasswordValidator = [
+  body("newPassword")
+    .notEmpty()
+    .withMessage("New Password is required")
+    .isLength({ min: 6 })
+    .withMessage("New Password must be 6 characters long"),
+
+  body("confirmNewPassword")
+    .notEmpty()
+    .withMessage("New Password Confirmation is required")
+    .isLength({ min: 6 })
+    .withMessage("New Password must be 6 characters long")
+    .custom((value, { req }) => {
+      if (value !== req.body.newPassword) {
+        throw new Error("Password do not match");
+      }
+      return true;
+    }),
+
+  validate,
 ];
 
 module.exports = {
   registrationValidation,
   userUpdateValidation,
-  chnagePasswordValidation
+  chnagePasswordValidation,
+  resetPasswordValidator,
 };
