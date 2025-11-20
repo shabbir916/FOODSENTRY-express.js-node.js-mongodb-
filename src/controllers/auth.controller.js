@@ -313,7 +313,7 @@ async function resetPassword(req, res) {
 
   console.log("RESET PASSWORD USER:", user);
 
-  // OTP must be verified before resetting password
+  // verifing OTP before resetting password
   if (!user.otpVerified) {
     return res.status(400).json({
       success: false,
@@ -325,7 +325,7 @@ async function resetPassword(req, res) {
   const hashNewPassword = await bcrypt.hash(newPassword, 10);
   user.password = hashNewPassword;
 
-  // Prevent reusing OTP verification
+  // Prevent reusing OTP 
   user.otpVerified = false;
 
   await user.save();
