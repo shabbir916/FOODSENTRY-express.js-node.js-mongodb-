@@ -29,6 +29,11 @@ const userSchema = new mongoose.Schema(
     resetToken: {
       type: String,
     },
+    googleId: {
+      type: String,
+      default: null,
+    },
+    avatar: { type: String, default: null },
   },
   { timestamps: true }
 );

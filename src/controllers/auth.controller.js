@@ -91,7 +91,7 @@ async function fetchUserProfile(req, res) {
   try {
     const userId = req.user?._id;
 
-    const UserProfile = await userModel.find(userId).select("-password");
+    const UserProfile = await userModel.findById(userId).select("-password");
 
     return res.status(200).json({
       success: true,
