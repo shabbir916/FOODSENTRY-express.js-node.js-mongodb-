@@ -23,13 +23,13 @@ const {
 const router = express.Router();
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 50,
+  windowMs: 10 * 60 * 1000,
+  max: 10,
   message: "Too many request from this IP, Please try again later",
 });
 
 router.post("/register", limiter, registrationValidation, registerUser);
-router.post("/login", loginUser);
+router.post("/login",limiter, loginUser);
 router.get("/user-profile", authUser, fetchUserProfile);
 router.patch(
   "/update-profile/:id",
@@ -44,8 +44,9 @@ router.patch(
   changePassword
 );
 router.post("/logout", authUser, logoutUser);
-router.post("/forget-password",forgetPassword);
-router.post("/verify-otp",verfiyOTP);
-router.post("/reset-password",resetPasswordValidator,resetPassword);
+router.post("/forget-password",authLimiter,forgetPassword);
+router.post("/verify-otp",authLimiter,verfiyOTP);
+router.post("/reset-password",authLimiter,resetPasswordValidator,resetPassword);
 
 module.exports = router;
+module.exports = limiter
