@@ -12,9 +12,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
-app.use("/auth",googleRoutes);
+app.use("/auth", googleRoutes);
 app.use("/api/pantry", pantryRoutes);
 app.use("/api/recipe", recipeRoutes);
-app.use("/api/dashboard",dashBoardRoutes);
+app.use("/api/dashboard", dashBoardRoutes);
 
 module.exports = app;

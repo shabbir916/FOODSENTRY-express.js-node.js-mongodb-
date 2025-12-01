@@ -325,7 +325,7 @@ async function resetPassword(req, res) {
   const hashNewPassword = await bcrypt.hash(newPassword, 10);
   user.password = hashNewPassword;
 
-  // Prevent reusing OTP 
+  // Prevent reusing OTP
   user.otpVerified = false;
 
   await user.save();
