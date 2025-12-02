@@ -3,27 +3,33 @@ const { getExpiringItems, expiryDateRange } = require("../utils/expiryHelper");
 
 async function getOverview(req, res) {
   try {
-    const userId = req.user._id;
+    const userId = req.user?._id;
 
     const { today, next7Days } = expiryDateRange();
 
-    // Total Items
-    const totalItems = await pantryModel.countDocuments({ user: userId });
+    // // Total Items
+    // const totalItems = await pantryModel.countDocuments({ user: userId });
 
-    // Expiring Soon Items
-    const expiringSoon = await pantryModel.countDocuments({
-      user: userId,
-      expiryDate: { $gte: today, $lte: next7Days },
-    });
+    // // Expiring Soon Items
+    // const expiringSoon = await pantryModel.countDocuments({
+    //   user: userId,
+    //   expiryDate: { $gte: today, $lte: next7Days },
+    // });
 
-    // Expired Items
-    const expiredItems = await pantryModel.countDocuments({
-      user: userId,
-      expiryDate: { $lt: today },
-    });
+    // // Expired Items
+    // const expiredItems = await pantryModel.countDocuments({
+    //   user: userId,
+    //   expiryDate: { $lt: today },
+    // });
 
-    res.status(200).json({
-      success: true,
+    const [totalItems,expiringSoon,expiredItems] = await Promise.all([
+      pantryModel.countDocuments({user:userId}),
+      pantryModel.countDocuments({user:userId,expiryDate:{$gte:today, $lte:next7Days}}),
+      pantryModel.countDocuments({user:userId,expiryDate:{$lt:today}})
+    ]);
+
+    return res.status(200).json({
+      success: true,  
       totalItems,
       expiringSoon,
       expiredItems,
@@ -83,7 +89,7 @@ async function getExpiringSoonList(req, res) {
 
     return res.status(200).json({
       success: true,
-      expiringSoonList: expiringSoonList.slice(0, 5),
+      expiringSoonList
     });
   } catch (error) {
     console.error("server Error", error);
