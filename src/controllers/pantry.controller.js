@@ -196,10 +196,54 @@ async function expiringSoon(req, res) {
   }
 }
 
+async function expiryStatus(req, res) {
+  try {
+    const userId = req.user?._id;
+
+    const items = await pantryModel.find({ user: userId });
+
+    const { today } = await expiryDateRange();
+
+    const expiringToday = [];
+    const expiringSoon = [];
+    const fresh = [];
+
+    items.forEach((item) => {
+      const expiry = new Date(item.expiryDate);
+      expiry.setHours(0, 0, 0, 0);
+
+      const diffTime = expiry - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        expiringToday.push(item);
+      } else if (diffDays >= 2 && diffDays <= 5) {
+        expiringSoon.push(item);
+      } else {
+        fresh.push(item);
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      expiringToday,
+      expiringSoon,
+      fresh,
+    });
+  } catch (error) {
+    console.error("Expiry Status Error", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error While Fethcing Expiry Status",
+    });
+  }
+}
+
 module.exports = {
   addItem,
   fetchItem,
   updatePantryItem,
   deletePantryItem,
   expiringSoon,
+  expiryStatus,
 };
