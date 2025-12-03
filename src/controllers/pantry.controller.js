@@ -36,31 +36,84 @@ async function addItem(req, res) {
   }
 }
 
+// async function fetchItem(req, res) {
+//   try {
+//     const userId = req.user?._id;
+
+//     const fetchedItem = await pantryModel
+//       .find({ user: userId })
+//       .sort({ createdAt: -1 });
+
+//     if (!fetchedItem || fetchedItem.length === 0) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Item not found in your pantry",
+//         fetchedItem: [],
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Pantry Items Fetched Successfully",
+//       fetchedItem,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Server Error while fetching item's from your pantry",
+//     });
+//   }
+// }
+
 async function fetchItem(req, res) {
   try {
     const userId = req.user?._id;
 
-    const fetchedItem = await pantryModel
+    const items = await pantryModel
       .find({ user: userId })
-      .sort({ createdAt: -1 });
+      .sort({ expiryDate: 1 });
 
-    if (!fetchedItem || fetchedItem.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: "Item not found in your pantry",
-        fetchedItem: [],
-      });
-    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Calculate expiry status for each item
+    const updatedItems = items.map((item) => {
+      let expiryStatus = "No Expiry";
+
+      if (item.expiryDate) {
+        const expiry = new Date(item.expiryDate);
+        expiry.setHours(0, 0, 0, 0);
+
+        const diffTime = expiry - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) {
+          expiryStatus = "Expired";
+        } else if (diffDays === 0) {
+          expiryStatus = "Expires Today";
+        } else if (diffDays <= 6) {
+          expiryStatus = `${diffDays} day(s) left`;
+        } else {
+          expiryStatus = "Fresh";
+        }
+      }
+
+      return {
+        ...item._doc,
+        expiryStatus,
+      };
+    });
 
     return res.status(200).json({
       success: true,
       message: "Pantry Items Fetched Successfully",
-      fetchedItem,
+      fetchedItem: updatedItems,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Fetch Pantry Items Error:", error);
+    return res.status(500).json({
       success: false,
-      message: "Server Error while fetching item's from your pantry",
+      message: "Server Error While Fetching Pantry Items",
     });
   }
 }

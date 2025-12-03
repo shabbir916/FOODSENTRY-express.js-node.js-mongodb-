@@ -7,29 +7,17 @@ async function getOverview(req, res) {
 
     const { today, next7Days } = expiryDateRange();
 
-    // // Total Items
-    // const totalItems = await pantryModel.countDocuments({ user: userId });
-
-    // // Expiring Soon Items
-    // const expiringSoon = await pantryModel.countDocuments({
-    //   user: userId,
-    //   expiryDate: { $gte: today, $lte: next7Days },
-    // });
-
-    // // Expired Items
-    // const expiredItems = await pantryModel.countDocuments({
-    //   user: userId,
-    //   expiryDate: { $lt: today },
-    // });
-
-    const [totalItems,expiringSoon,expiredItems] = await Promise.all([
-      pantryModel.countDocuments({user:userId}),
-      pantryModel.countDocuments({user:userId,expiryDate:{$gte:today, $lte:next7Days}}),
-      pantryModel.countDocuments({user:userId,expiryDate:{$lt:today}})
+    const [totalItems, expiringSoon, expiredItems] = await Promise.all([
+      pantryModel.countDocuments({ user: userId }),
+      pantryModel.countDocuments({
+        user: userId,
+        expiryDate: { $gte: today, $lte: next7Days },
+      }),
+      pantryModel.countDocuments({ user: userId, expiryDate: { $lt: today } }),
     ]);
 
     return res.status(200).json({
-      success: true,  
+      success: true,
       totalItems,
       expiringSoon,
       expiredItems,
@@ -81,27 +69,27 @@ async function getSummary(req, res) {
   }
 }
 
-async function getExpiringSoonList(req, res) {
-  try {
-    const userId = req.user?._id;
+// async function getExpiringSoonList(req, res) {
+//   try {
+//     const userId = req.user?._id;
 
-    const expiringSoonList = await getExpiringItems(userId);
+//     const expiringSoonList = await getExpiringItems(userId);
 
-    return res.status(200).json({
-      success: true,
-      expiringSoonList
-    });
-  } catch (error) {
-    console.error("server Error", error);
-    res.status(500).json({
-      success: false,
-      message: "Server Error while fetching Pantry Summary",
-    });
-  }
-}
+//     return res.status(200).json({
+//       success: true,
+//       expiringSoonList,
+//     });
+//   } catch (error) {
+//     console.error("server Error", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Server Error while fetching Pantry Summary",
+//     });
+//   }
+// }
 
 module.exports = {
   getOverview,
   getSummary,
-  getExpiringSoonList,
+  // getExpiringSoonList,
 };
