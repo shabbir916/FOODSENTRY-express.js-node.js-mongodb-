@@ -1,5 +1,5 @@
 const pantryModel = require("../models/pantry.model");
-const { getExpiringItems } = require("../utils/expiryHelper");
+const { getExpiringItems, expiryDateRange } = require("../utils/expiryHelper");
 
 async function addItem(req, res) {
   try {
@@ -36,35 +36,6 @@ async function addItem(req, res) {
   }
 }
 
-// async function fetchItem(req, res) {
-//   try {
-//     const userId = req.user?._id;
-
-//     const fetchedItem = await pantryModel
-//       .find({ user: userId })
-//       .sort({ createdAt: -1 });
-
-//     if (!fetchedItem || fetchedItem.length === 0) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Item not found in your pantry",
-//         fetchedItem: [],
-//       });
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Pantry Items Fetched Successfully",
-//       fetchedItem,
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: "Server Error while fetching item's from your pantry",
-//     });
-//   }
-// }
-
 async function fetchItem(req, res) {
   try {
     const userId = req.user?._id;
@@ -73,11 +44,10 @@ async function fetchItem(req, res) {
       .find({ user: userId })
       .sort({ expiryDate: 1 });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const { today } = await expiryDateRange();
 
-    // Calculate expiry status for each item
-    const updatedItems = items.map((item) => {
+    // expiry Status calculation for each item
+    const formatedItems = items.map((item) => {
       let expiryStatus = "No Expiry";
 
       if (item.expiryDate) {
@@ -92,7 +62,7 @@ async function fetchItem(req, res) {
         } else if (diffDays === 0) {
           expiryStatus = "Expires Today";
         } else if (diffDays <= 6) {
-          expiryStatus = `${diffDays} day(s) left`;
+          expiryStatus = `in ${diffDays} day(s) `;
         } else {
           expiryStatus = "Fresh";
         }
@@ -107,7 +77,7 @@ async function fetchItem(req, res) {
     return res.status(200).json({
       success: true,
       message: "Pantry Items Fetched Successfully",
-      fetchedItem: updatedItems,
+      fetchedItem: formatedItems,
     });
   } catch (error) {
     console.error("Fetch Pantry Items Error:", error);
