@@ -49,40 +49,38 @@ async function fetchItem(req, res) {
       .find({ user: userId })
       .sort({ expiryDate: 1 });
 
-    const { today } = await expiryDateRange();
+    // Async map fix
+    const formattedItems = await Promise.all(
+      items.map(async (item) => {
+        if (!item.expiryDate) {
+          return { ...item._doc, expiryStatus: "No Expiry" };
+        }
 
-    // expiry Status calculation for each item
-    const formatedItems = items.map((item) => {
-      let expiryStatus = "No Expiry";
+        const { diffDays } = await getExpiryStatus(item.expiryDate);
 
-      if (item.expiryDate) {
-        const expiry = new Date(item.expiryDate);
-        expiry.setHours(0, 0, 0, 0);
-
-        const diffTime = expiry - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        let expiryStatus = "";
 
         if (diffDays < 0) {
           expiryStatus = "Expired";
         } else if (diffDays === 0) {
           expiryStatus = "Expires Today";
         } else if (diffDays <= 6) {
-          expiryStatus = `in ${diffDays} day(s) `;
+          expiryStatus = `in ${diffDays} day(s)`;
         } else {
           expiryStatus = "Fresh";
         }
-      }
 
-      return {
-        ...item._doc,
-        expiryStatus,
-      };
-    });
+        return {
+          ...item._doc,
+          expiryStatus,
+        };
+      })
+    );
 
     return res.status(200).json({
       success: true,
       message: "Pantry Items Fetched Successfully",
-      fetchedItem: formatedItems,
+      fetchedItem: formattedItems,
     });
   } catch (error) {
     console.error("Fetch Pantry Items Error:", error);
@@ -92,42 +90,6 @@ async function fetchItem(req, res) {
     });
   }
 }
-
-// async function fetchItem(req, res) {
-//   try {
-//     const userId = req.user?._id;
-
-//     const items = await pantryModel
-//       .find({ user: userId })
-//       .sort({ expiryDate: 1 });
-
-//     // Har item ka expiry status helper se add karega
-//     const formattedItems = await Promise.all(
-//       items.map(async (item) => {
-//         const expiryStatus = item.expiryDate
-//           ? await getExpiryStatus(item.expiryDate)
-//           : "No Expiry";
-
-//         return {
-//           ...item._doc,
-//           expiryStatus,
-//         };
-//       })
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Pantry Items Fetched Successfully",
-//       fetchedItem: formattedItems,
-//     });
-//   } catch (error) {
-//     console.error("Fetch Pantry Items Error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server Error While Fetching Pantry Items",
-//     });
-//   }
-// }
 
 async function updatePantryItem(req, res) {
   try {

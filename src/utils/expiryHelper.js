@@ -19,15 +19,19 @@ async function getExpiryStatus(expiryDate) {
 
   const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
 
+  let status = "";
+
   if (diffDays < 0) {
-    return "Expired";
+    status = "Expired";
   } else if (diffDays === 0) {
-    return "Expiring Today";
+    status = "Expiring Today";
   } else if (diffDays >= 1 && diffDays <= 6) {
-    return "Expiring Soon";
+    status = "Expiring Soon";
   } else {
-    return "Fresh";
+    status = "Fresh";
   }
+
+  return { expiry, status, diffDays };
 }
 
 async function groupByExpiryStatus(items) {
@@ -39,7 +43,7 @@ async function groupByExpiryStatus(items) {
   };
 
   for (const item of items) {
-    const status = await getExpiryStatus(item.expiryDate);
+    const { status } = await getExpiryStatus(item.expiryDate);
 
     if (status === "Expiring Today") {
       groups.expiringToday.push(item);
