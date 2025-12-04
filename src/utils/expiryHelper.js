@@ -19,13 +19,18 @@ async function getExpiryStatus(expiryDate) {
 
   const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
 
-  if (diffDays < 0) return "Expired";
-  if (diffDays === 0) return "Expiring Today";
-  if (diffDays >= 1 && diffDays <= 6) return "Expiring Soon";
-  return "Fresh";
+  if (diffDays < 0) {
+    return "Expired";
+  } else if (diffDays === 0) {
+    return "Expiring Today";
+  } else if (diffDays >= 1 && diffDays <= 6) {
+    return "Expiring Soon";
+  } else {
+    return "Fresh";
+  }
 }
 
-function groupByExpiryStatus(items) {
+async function groupByExpiryStatus(items) {
   const groups = {
     expiringToday: [],
     expiringSoon: [],
@@ -33,14 +38,19 @@ function groupByExpiryStatus(items) {
     expired: [],
   };
 
-  items.forEach((item) => {
-    const status = getExpiryStatus(item.expiryDate);
+  for (const item of items) {
+    const status = await getExpiryStatus(item.expiryDate);
 
-    if (status === "Expiring Today") groups.expiringToday.push(item);
-    else if (status === "Expiring Soon") groups.expiringSoon.push(item);
-    else if (status === "Fresh") groups.fresh.push(item);
-    else groups.expired.push(item);
-  });
+    if (status === "Expiring Today") {
+      groups.expiringToday.push(item);
+    } else if (status === "Expiring Soon") {
+      groups.expiringSoon.push(item);
+    } else if (status === "Fresh") {
+      groups.fresh.push(item);
+    } else {
+      groups.expired.push(item);
+    }
+  }
 
   return groups;
 }

@@ -1,5 +1,10 @@
 const pantryModel = require("../models/pantry.model");
-const { getExpiringItems, expiryDateRange } = require("../utils/expiryHelper");
+const {
+  getExpiringItems,
+  expiryDateRange,
+  getExpiryStatus,
+  groupByExpiryStatus,
+} = require("../utils/expiryHelper");
 
 async function addItem(req, res) {
   try {
@@ -87,6 +92,42 @@ async function fetchItem(req, res) {
     });
   }
 }
+
+// async function fetchItem(req, res) {
+//   try {
+//     const userId = req.user?._id;
+
+//     const items = await pantryModel
+//       .find({ user: userId })
+//       .sort({ expiryDate: 1 });
+
+//     // Har item ka expiry status helper se add karega
+//     const formattedItems = await Promise.all(
+//       items.map(async (item) => {
+//         const expiryStatus = item.expiryDate
+//           ? await getExpiryStatus(item.expiryDate)
+//           : "No Expiry";
+
+//         return {
+//           ...item._doc,
+//           expiryStatus,
+//         };
+//       })
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Pantry Items Fetched Successfully",
+//       fetchedItem: formattedItems,
+//     });
+//   } catch (error) {
+//     console.error("Fetch Pantry Items Error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server Error While Fetching Pantry Items",
+//     });
+//   }
+// }
 
 async function updatePantryItem(req, res) {
   try {
@@ -202,33 +243,14 @@ async function expiryStatus(req, res) {
 
     const items = await pantryModel.find({ user: userId });
 
-    const { today } = await expiryDateRange();
-
-    const expiringToday = [];
-    const expiringSoon = [];
-    const fresh = [];
-
-    items.forEach((item) => {
-      const expiry = new Date(item.expiryDate);
-      expiry.setHours(0, 0, 0, 0);
-
-      const diffTime = expiry - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays === 0) {
-        expiringToday.push(item);
-      } else if (diffDays >= 2 && diffDays <= 5) {
-        expiringSoon.push(item);
-      } else {
-        fresh.push(item);
-      }
-    });
+    const groups = await groupByExpiryStatus(items);
 
     return res.status(200).json({
       success: true,
-      expiringToday,
-      expiringSoon,
-      fresh,
+      expiringToday: groups.expiringToday,
+      expiringSoon: groups.expiringSoon,
+      fresh: groups.fresh,
+      expired: groups.expired,
     });
   } catch (error) {
     console.error("Expiry Status Error", error);
