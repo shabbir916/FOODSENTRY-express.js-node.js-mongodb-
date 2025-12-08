@@ -5,7 +5,8 @@ const {
   updatePantryItem,
   deletePantryItem,
   expiringSoon,
-  expiryStatus
+  expiryStatus,
+  getExpiryItemsNotification
 } = require("../controllers/pantry.controller");
 const {
   validatePantryItem,
@@ -25,6 +26,6 @@ const router = express.Router();
   router.delete("/delete-item/:id", authUser, deletePantryItem);
   router.get("/expiring",authUser,expiringSoon)
   router.get("/expiry-status",authUser,expiryStatus)
-  router.get("/notifications",authUser)
+  router.get("/notifications",authUser,getExpiryItemsNotification)
 
 module.exports = router;

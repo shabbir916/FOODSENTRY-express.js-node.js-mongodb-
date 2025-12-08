@@ -5,6 +5,7 @@ const {
   getExpiryStatus,
   groupByExpiryStatus,
 } = require("../utils/expiryHelper");
+const getExpiringSoonNotifications = require("../utils/expiryNotifications");
 
 async function addItem(req, res) {
   try {
@@ -222,6 +223,26 @@ async function expiryStatus(req, res) {
   }
 }
 
+async function getExpiryItemsNotification(req, res) {
+  try {
+    const userId = req.user?._id;
+
+    const notifications = await getExpiringSoonNotifications(userId);
+
+    return res.status(200).json({
+      success: true,
+      message:"Expiry Notification sent to user",
+      expiringSoon: notifications,
+    });
+  } catch (error) {
+    console.error("Notification Error", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error While notifiying user",
+    });
+  }
+}
+
 module.exports = {
   addItem,
   fetchItem,
@@ -229,4 +250,5 @@ module.exports = {
   deletePantryItem,
   expiringSoon,
   expiryStatus,
+  getExpiryItemsNotification,
 };

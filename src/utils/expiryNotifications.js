@@ -1,11 +1,8 @@
 const pantryModel = require("../models/pantry.model");
-const { expiryDateRange } = require("./expiryHelper");
 const { getExpiryStatus } = require("../utils/expiryHelper");
 
 async function getExpiringSoonNotifications(userId) {
   const items = await pantryModel.find({ user: userId });
-
-  const { today } = await expiryDateRange();
 
   const notifications = [];
 
@@ -15,7 +12,7 @@ async function getExpiringSoonNotifications(userId) {
     const { diffDays, status } = await getExpiryStatus(item.expiryDate);
 
     if (diffDays < 0) return;
-    
+
     if (diffDays === 0 || diffDays <= 6) {
       notifications.push({
         _id: item._id,
