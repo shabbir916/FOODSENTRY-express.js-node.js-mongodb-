@@ -1,4 +1,3 @@
-// src/services/spoonacular.service.js
 const axios = require("axios");
 const API_KEY = process.env.SPOONACULAR_API_KEY;
 

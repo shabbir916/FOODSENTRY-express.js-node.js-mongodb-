@@ -25,5 +25,6 @@ const router = express.Router();
   router.delete("/delete-item/:id", authUser, deletePantryItem);
   router.get("/expiring",authUser,expiringSoon)
   router.get("/expiry-status",authUser,expiryStatus)
+  router.get("/notifications",authUser)
 
 module.exports = router;
