@@ -1,21 +1,32 @@
 const pantryModel = require("../models/pantry.model");
 const { getExpiringItems } = require("./expiryHelper");
 
-async function getIngredients(userId) {
-  const expiringItems = await getExpiringItems(userId);
-  const allPantryItems = await pantryModel.find({ user: userId });
+async function getIngredients(userId, limit = 10) {
+  if (!userId) return { pantryIngredients: [], expiryIngredients: [], ingredients: [] };
 
-  const expiryIngredients = expiringItems.map((item) =>
-    item.name.trim().toLowerCase()
+  const allPantry = await pantryModel.find({ user: userId }).lean();
+  const expiring = await getExpiringItems(userId); // uses your helper (next 7 days) and returns limited 5
+
+  const normalize = (s) => (s || "").toString().trim().toLowerCase();
+
+  const pantryIngredients = Array.from(
+    new Set(allPantry.map((i) => normalize(i.name)).filter(Boolean))
   );
 
-  const pantryIngredients = allPantryItems.map((item) =>
-    item.name.trim().toLowerCase()
+  const expiryIngredients = Array.from(
+    new Set(expiring.map((i) => normalize(i.name)).filter(Boolean))
   );
 
-  const ingredients = [...new Set([...expiryIngredients, ...pantryIngredients])];
+  
+  const combined = [...expiryIngredients, ...pantryIngredients.filter((p) => !expiryIngredients.includes(p))];
 
-  return { expiryIngredients, pantryIngredients, ingredients };
+  const ingredients = combined.slice(0, limit);
+
+  return {
+    pantryIngredients,
+    expiryIngredients,
+    ingredients,
+  };
 }
 
 module.exports = getIngredients;

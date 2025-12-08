@@ -49,7 +49,6 @@ async function fetchItem(req, res) {
       .find({ user: userId })
       .sort({ expiryDate: 1 });
 
-    // Async map fix
     const formattedItems = await Promise.all(
       items.map(async (item) => {
         if (!item.expiryDate) {

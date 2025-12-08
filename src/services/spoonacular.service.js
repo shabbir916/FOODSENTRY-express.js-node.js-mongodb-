@@ -1,27 +1,26 @@
+// src/services/spoonacular.service.js
 const axios = require("axios");
 const API_KEY = process.env.SPOONACULAR_API_KEY;
 
-// Fetch recipes based on ingredients
-async function getRecipesByIngredients(ingredients) {
+async function getRecipesByIngredients(ingredients = [], number = 6) {
   try {
     const response = await axios.get(
       "https://api.spoonacular.com/recipes/findByIngredients",
       {
         params: {
           ingredients: ingredients.join(","),
-          number: 3,
+          number,
           apiKey: API_KEY,
         },
       }
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching recipes:", error.message);
+    console.error("Spoonacular fetch error:", error?.message || error);
     throw new Error("Failed to fetch recipes from Spoonacular");
   }
 }
 
-// Fetch recipe details
 async function getRecipeDetails(id) {
   try {
     const response = await axios.get(
@@ -32,12 +31,9 @@ async function getRecipeDetails(id) {
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching recipe details:", error.message);
+    console.error("Spoonacular details error:", error?.message || error);
     throw new Error("Failed to fetch recipe details");
   }
 }
 
-module.exports = {
-  getRecipesByIngredients,
-  getRecipeDetails,
-};
+module.exports = { getRecipesByIngredients, getRecipeDetails };
