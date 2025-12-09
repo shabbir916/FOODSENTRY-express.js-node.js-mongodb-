@@ -21,6 +21,6 @@ const pantrySchema = new mongoose.Schema({
   },
 });
 
-const pantyrModel = mongoose.model("pantries",pantrySchema);
+const pantyrModel = mongoose.model("pantries", pantrySchema);
 
-module.exports = pantyrModel
+module.exports = pantyrModel;

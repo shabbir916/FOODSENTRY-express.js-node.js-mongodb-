@@ -27,7 +27,7 @@ async function sendExpiryEmails() {
     `;
 
     await sendEmail(
-      user.email,
+      process.env.EMAIL_USER,
       "Your Pantry Items Are Expiring Soon",
       html
     );
