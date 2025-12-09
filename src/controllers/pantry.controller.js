@@ -4,13 +4,14 @@ const {
   expiryDateRange,
   getExpiryStatus,
   groupByExpiryStatus,
+  getOpenExpiryStatus,
 } = require("../utils/expiryHelper");
 const getExpiringSoonNotifications = require("../utils/expiryNotifications");
 
 async function addItem(req, res) {
   try {
     const userId = req.user?._id;
-    const { name, category, quantity, expiryDate,useWithinDays } = req.body;
+    const { name, category, quantity, expiryDate, useWithinDays } = req.body;
 
     const existingItem = await pantryModel.findOne({ name, user: userId });
 
@@ -27,7 +28,7 @@ async function addItem(req, res) {
       category,
       expiryDate,
       user: userId,
-      useWithinDays
+      useWithinDays,
     });
 
     return res.status(201).json({
@@ -71,9 +72,14 @@ async function fetchItem(req, res) {
           expiryStatus = "Fresh";
         }
 
+        const openData = await getOpenExpiryStatus(item);
+
         return {
           ...item._doc,
           expiryStatus,
+          openExpiryDate: openData.openExpiryDate,
+          openExpiryStatus: openData.status,
+          openExpiryDaysLeft: openData.diffDays,
         };
       })
     );
@@ -114,7 +120,13 @@ async function updatePantryItem(req, res) {
       });
     }
 
-    const allowedFields = ["name", "quantity", "category", "expiryDate","useWithinDays" ];
+    const allowedFields = [
+      "name",
+      "quantity",
+      "category",
+      "expiryDate",
+      "useWithinDays",
+    ];
     const invalidFields = Object.keys(updates).filter(
       (key) => !allowedFields.includes(key)
     );
@@ -181,6 +193,33 @@ async function deletePantryItem(req, res) {
   }
 }
 
+async function markOpen(req, res) {
+  try {
+    const userId = req.user._id;
+    const { id } = req.params;
+
+    const item = await pantryModel.findById(id);
+    if (!item) return res.status(404).json({ message: "Item not found" });
+
+    if (item.user.toString() !== userId.toString())
+      return res.status(403).json({ message: "Unauthorized" });
+
+    const updated = await pantryModel.findByIdAndUpdate(
+      id,
+      {
+        opened: true,
+        openedAt: new Date(),
+        emailNotifiedOpenExpiry: false,
+      },
+      { new: true }
+    );
+
+    res.json({ success: true, item: updated });
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
+}
+
 async function expiringSoon(req, res) {
   try {
     const userId = req.user?._id;
@@ -232,7 +271,7 @@ async function getExpiryItemsNotification(req, res) {
 
     return res.status(200).json({
       success: true,
-      message:"Expiry Notification sent to user",
+      message: "Expiry Notification sent to user",
       expiringSoon: notifications,
     });
   } catch (error) {
@@ -252,4 +291,5 @@ module.exports = {
   expiringSoon,
   expiryStatus,
   getExpiryItemsNotification,
+  markOpen
 };
