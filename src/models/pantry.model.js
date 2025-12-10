@@ -23,7 +23,7 @@ const pantrySchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  opendOn: {
+  openedOn: {
     type: Date,
     default: null,
   },

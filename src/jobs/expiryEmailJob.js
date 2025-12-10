@@ -12,29 +12,38 @@ async function sendExpiryEmails() {
     if (!Array.isArray(notifications) || notifications.length === 0) continue;
 
     const html = `
-      <h2>Your Items are Expiring Soon</h2>
+      <h2>Your Pantry Alerts</h2>
+      <p>The following items need your attention:</p>
       <ul>
-        ${notifications
-          .map(
-            (i) => `
+        ${notifications.map((i) => {
+          if (i.type === "opened") {
+            return `
               <li>
-                <b>${i.name}</b> will expire in <b>${i.daysLeft} days</b>
+                <b>${i.name}</b> was opened <b>${i.daysLeft} days ago</b> and must be used within <b>${i.useWithinDays} days</b>.
               </li>
-            `
-          )
-          .join("")}
+            `;
+          } else {
+            return `
+              <li>
+                <b>${i.name}</b> will expire in <b>${i.daysLeft} days</b>.
+              </li>
+            `;
+          }
+        }).join("")}
       </ul>
     `;
 
-    await sendEmail(
-      process.env.EMAIL_USER,
-      "Your Pantry Items Are Expiring Soon",
+    await sendEmail({
+      to: user.email,
+      subject: "Your Pantry Items Need Attention",
       html
-    );
+    });
 
-    // Mark notified
+    // Mark items as notified
     for (let item of notifications) {
-      await pantryModel.findByIdAndUpdate(item._id, { emailNotified: true });
+      await pantryModel.findByIdAndUpdate(item._id, {
+        emailNotified: true,
+      });
     }
   }
 }

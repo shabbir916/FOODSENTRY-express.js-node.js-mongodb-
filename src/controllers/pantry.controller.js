@@ -8,10 +8,12 @@ const {
 } = require("../utils/expiryHelper");
 const getExpiringSoonNotifications = require("../utils/expiryNotifications");
 
+
+
 async function addItem(req, res) {
   try {
     const userId = req.user?._id;
-    const { name, category, quantity, expiryDate, useWithinDays } = req.body;
+    const { name, category, quantity, expiryDate,opened,openedOn,useWithinDays } = req.body;
 
     const existingItem = await pantryModel.findOne({ name, user: userId });
 
@@ -28,6 +30,8 @@ async function addItem(req, res) {
       category,
       expiryDate,
       user: userId,
+      opened,
+      openedOn,
       useWithinDays,
     });
 
@@ -125,6 +129,8 @@ async function updatePantryItem(req, res) {
       "quantity",
       "category",
       "expiryDate",
+      "opened",
+      "openedOn",
       "useWithinDays",
     ];
     const invalidFields = Object.keys(updates).filter(

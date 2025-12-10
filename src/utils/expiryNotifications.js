@@ -2,7 +2,11 @@ const pantryModel = require("../models/pantry.model");
 const { getExpiryStatus } = require("../utils/expiryHelper");
 
 async function getExpiringSoonNotifications(userId) {
-  const items = await pantryModel.find({ user: userId });
+  const items = await pantryModel.find({
+    user: userId,
+    expiryDate: { $exists: true, $ne: null },
+    emailNotified: false,
+  });
 
   const notifications = [];
 

@@ -3,13 +3,13 @@ const router = express.Router();
 const transporter = require("../config/email");
 const authUser = require("../middleware/auth.middleware");
 
-router.get("/test-mail", authUser,async (req, res) => {
+router.get("/test-mail", authUser, async (req, res) => {
   try {
     const info = await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: process.env.EMAIL_USER,
       subject: "Test Mail Working",
-      text: "Hello, your mail setup is working!",
+      text: "Hello, your mail setup is working perfectly!",
     });
 
     return res.json({
