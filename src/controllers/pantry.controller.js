@@ -8,12 +8,18 @@ const {
 } = require("../utils/expiryHelper");
 const getExpiringSoonNotifications = require("../utils/expiryNotifications");
 
-
-
 async function addItem(req, res) {
   try {
     const userId = req.user?._id;
-    const { name, category, quantity, expiryDate,opened,openedOn,useWithinDays } = req.body;
+    const {
+      name,
+      category,
+      quantity,
+      expiryDate,
+      opened,
+      openedOn,
+      useWithinDays,
+    } = req.body;
 
     const existingItem = await pantryModel.findOne({ name, user: userId });
 
@@ -24,15 +30,37 @@ async function addItem(req, res) {
       });
     }
 
+    const finalOpened = opened === true || opened === "true";
+
+    let finalOpenedOn = openedOn ? new Date(openedOn) : null;
+    if (finalOpened && !finalOpenedOn) {
+      finalOpenedOn = new Date();
+    }
+
+    let finalUseWithinDays =
+      typeof useWithinDays !== "undefined" && useWithinDays !== null
+        ? Number(useWithinDays)
+        : null;
+    if (
+      finalOpened &&
+      (finalUseWithinDays === null || Number.isNaN(finalUseWithinDays))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "When marking item opened, provide useWithinDays (positive integer).",
+      });
+    }
+
     const item = await pantryModel.create({
       name,
       quantity,
       category,
       expiryDate,
       user: userId,
-      opened,
-      openedOn,
-      useWithinDays,
+      opened: finalOpened,
+      openedOn: finalOpenedOn,
+      useWithinDays: finalUseWithinDays,
     });
 
     return res.status(201).json({
@@ -132,6 +160,8 @@ async function updatePantryItem(req, res) {
       "opened",
       "openedOn",
       "useWithinDays",
+      "emailNotified",
+      "emailNotifiedOpenExpiry",
     ];
     const invalidFields = Object.keys(updates).filter(
       (key) => !allowedFields.includes(key)
@@ -142,6 +172,50 @@ async function updatePantryItem(req, res) {
         success: false,
         message: `Invalid field(s): ${invalidFields.join(", ")}`,
       });
+    }
+
+    if (typeof updates.opened !== "undefined") {
+      updates.opened = updates.opened === true || updates.opened === "true";
+
+      if (updates.opened) {
+        if (!updates.openedOn && !item.openedOn) {
+          updates.openedOn = new Date();
+        }
+        if (!updates.useWithinDays && !item.useWithinDays) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "When marking item opened, useWithinDays must be present (either in payload or previously set).",
+          });
+        }
+        if (!updates.useWithinDays && item.useWithinDays) {
+          updates.useWithinDays = item.useWithinDays;
+        }
+      } else {
+        updates.openedOn = null;
+        updates.emailNotifiedOpenExpiry = false;
+      }
+    } else {
+      if (
+        typeof updates.openedOn !== "undefined" &&
+        updates.openedOn !== null &&
+        !updates.opened
+      ) {
+        updates.opened = true;
+      }
+      if (updates.opened && !updates.useWithinDays && !item.useWithinDays) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "When marking item opened, useWithinDays must be present (either in payload or previously set).",
+        });
+      }
+    }
+    if (
+      typeof updates.expiryDate !== "undefined" &&
+      updates.expiryDate !== null
+    ) {
+      updates.expiryDate = new Date(updates.expiryDate);
     }
 
     const updatedItem = await pantryModel.findByIdAndUpdate(
@@ -297,5 +371,5 @@ module.exports = {
   expiringSoon,
   expiryStatus,
   getExpiryItemsNotification,
-  markOpen
+  markOpen,
 };
