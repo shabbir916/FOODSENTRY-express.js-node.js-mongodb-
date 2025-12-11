@@ -1,95 +1,52 @@
 const pantryModel = require("../models/pantry.model");
-const { getExpiringItems, expiryDateRange } = require("../utils/expiryHelper");
+const { expiryDateRange, attachExpiryComputedFields } = require("../utils/expiryHelper");
 
 async function getOverview(req, res) {
   try {
-    const userId = req.user?._id;
+    const userId = req.user._id;
 
-    const { today, next7Days } = expiryDateRange();
+    const items = await pantryModel.find({ user: userId });
+    const enriched = await Promise.all(items.map((i) => attachExpiryComputedFields(i)));
 
-    const [totalItems, expiringSoon, expiredItems] = await Promise.all([
-      pantryModel.countDocuments({ user: userId }),
-      pantryModel.countDocuments({
-        user: userId,
-        expiryDate: { $gte: today, $lte: next7Days },
-      }),
-      pantryModel.countDocuments({ user: userId, expiryDate: { $lt: today } }),
-    ]);
+    const totalItems = enriched.length;
+    const expiringSoon = enriched.filter((i) => i.expiryStatus === "Expiring Soon" || i.expiryStatus === "Expiring Today").length;
+    const expiredItems = enriched.filter((i) => i.expiryStatus === "Expired").length;
 
-    return res.status(200).json({
-      success: true,
-      totalItems,
-      expiringSoon,
-      expiredItems,
-    });
+    return res.status(200).json({ success: true, totalItems, expiringSoon, expiredItems });
   } catch (error) {
-    console.error("server Error", error);
-    res.status(500).json({
-      success: false,
-      message:
-        "Server Error while fetching total,expiringSoon and expired Items from pantry",
-    });
+    console.error("getOverview error:", error);
+    return res.status(500).json({ success: false, message: "Server Error while fetching total,expiringSoon and expired Items from pantry" });
   }
 }
 
 async function getSummary(req, res) {
   try {
-    const userId = req.user?._id;
-
-    let forecast = {};
+    const userId = req.user._id;
+    const items = await pantryModel.find({ user: userId });
+    const enriched = await Promise.all(items.map((i) => attachExpiryComputedFields(i)));
 
     const { today } = expiryDateRange();
 
+    const forecast = {};
     for (let i = 0; i < 7; i++) {
-      const day = new Date(today);
-      day.setDate(day.getDate() + i);
+      const dayStart = new Date(today);
+      dayStart.setDate(today.getDate() + i);
+      dayStart.setHours(0, 0, 0, 0);
 
-      const nextDay = new Date(day);
-      nextDay.setDate(day.getDate() + 1);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayStart.getDate() + 1);
+      dayEnd.setHours(0, 0, 0, 0);
 
-      const count = await pantryModel.countDocuments({
-        user: userId,
-        expiryDate: { $gte: day, $lt: nextDay },
-      });
-
-      const label = day.toLocaleDateString("en-US", { weekday: "short" });
-
+      const count = enriched.filter((it) => it.finalExpiryDate && it.finalExpiryDate >= dayStart && it.finalExpiryDate < dayEnd).length;
+      const label = dayStart.toLocaleDateString("en-US", { weekday: "short" });
       forecast[label] = count;
     }
-    res.status(200).json({
-      success: true,
-      forecast,
-    });
+
+    return res.status(200).json({ success: true, forecast });
   } catch (error) {
-    console.error("server Error", error);
-    res.status(500).json({
-      success: false,
-      message: "Server Error while fetching Pantry Summary",
-    });
+    console.error("getSummary error:", error);
+    return res.status(500).json({ success: false, message: "Server Error while fetching Pantry Summary" });
   }
 }
 
-// async function getExpiringSoonList(req, res) {
-//   try {
-//     const userId = req.user?._id;
-
-//     const expiringSoonList = await getExpiringItems(userId);
-
-//     return res.status(200).json({
-//       success: true,
-//       expiringSoonList,
-//     });
-//   } catch (error) {
-//     console.error("server Error", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Server Error while fetching Pantry Summary",
-//     });
-//   }
-// }
-
-module.exports = {
-  getOverview,
-  getSummary,
-  // getExpiringSoonList,
-};
+module.exports = { getOverview, getSummary };
