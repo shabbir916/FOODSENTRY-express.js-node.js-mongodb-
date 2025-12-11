@@ -27,9 +27,17 @@ const pantrySchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
-  useWithinDays: 
-  { type: Number, 
-    default: null 
+  useWithinDays: {
+    type: Number,
+    default: null,
+  },
+  openedExpiryDate: {
+    type: Date,
+    default: null,
+  },
+  finalExpiryDate: {
+    type: Date,
+    default: null,
   },
   emailNotified: {
     type: Boolean,

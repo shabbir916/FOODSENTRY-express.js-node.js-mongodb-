@@ -11,78 +11,114 @@ function expiryDateRange() {
   return { today, next7Days };
 }
 
-async function getExpiryStatus(expiryDate) {
-  const { today } = await expiryDateRange();
+function computeOpenedExpiryDate(openedOn, useWithinDays) {
+  if (!openedOn || !useWithinDays) return null;
 
-  const expiry = new Date(expiryDate);
-  expiry.setHours(0, 0, 0, 0);
+  const d = new Date();
+  d.setDate(d.getDate() + useWithinDays);
+  d.setHours(0, 0, 0, 0);
 
-  const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-
-  let status = "";
-
-  if (diffDays < 0) {
-    status = "Expired";
-  } else if (diffDays === 0) {
-    status = "Expiring Today";
-  } else if (diffDays >= 1 && diffDays <= 6) {
-    status = "Expiring Soon";
-  } else {
-    status = "Fresh";
-  }
-
-  return { expiry, status, diffDays };
+  return d;
 }
 
-function computeOpenExpiryDate(openedAt, useAfterOpeningDays) {
-  if (!openedAt || !useAfterOpeningDays) return null;
-
-  const date = new Date(openedAt);
-  date.setDate(date.getDate() + useAfterOpeningDays);
-  date.setHours(0, 0, 0, 0);
-
-  return date;
+function computeFinalExpiryDate(expiryDate, openedExpiryDate) {
+  if (expiryDate && openedExpiryDate) {
+    return new Date(
+      Math.min(
+        new Date(expiryDate).getTime(),
+        new Date(openedExpiryDate).getTime()
+      )
+    );
+  }
+  return expiryDate || openedExpiryDate || null;
 }
 
-async function getOpenExpiryStatus(item) {
-  if (!item.opened || !item.openedAt || !item.useAfterOpeningDays) {
-    return { openExpiryDate: null, status: "N/A", diffDays: null };
-  }
+// async function getExpiryStatus(expiryDate) {
+//   const { today } = await expiryDateRange();
 
-  const openExpiryDate = computeOpenExpiryDate(
-    item.openedAt,
-    item.useAfterOpeningDays
+//   const expiry = new Date(expiryDate);
+//   expiry.setHours(0, 0, 0, 0);
+
+//   const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+
+//   let status = "";
+
+//   if (diffDays < 0) {
+//     status = "Expired";
+//   } else if (diffDays === 0) {
+//     status = "Expiring Today";
+//   } else if (diffDays >= 1 && diffDays <= 6) {
+//     status = "Expiring Soon";
+//   } else {
+//     status = "Fresh";
+//   }
+
+//   return { expiry, status, diffDays };
+// }
+
+async function getExpiryStatus(targetDate) {
+  const { today } = expiryDateRange();
+  if (!targetDate) return { status: "No Expiry Status", diffDays: null };
+
+  const d = new Date(targetDate);
+  d.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+
+  let status = "Fresh";
+  if (diffDays < 0) status = "Expired";
+  else if (diffDays === 0) status = "Expiring Today";
+  else if (diffDays >= 1 && diffDays <= 6) status = "Expiring Soon";
+
+  return { status, diffDays };
+}
+
+async function attachExpiryComputedFields(item) {
+  const openedExpiryDate = computeOpenedExpiryDate(
+    item.openedOn,
+    item.useWithinDays
   );
 
-  const { status, diffDays } = await getExpiryStatus(openExpiryDate);
+  const finalExpiryDate = computeFinalExpiryDate(
+    item.expiryDate,
+    openedExpiryDate
+  );
 
-  return { openExpiryDate, status, diffDays };
-}
+  const { status, diffDays } = await getExpiryStatus(finalExpiryDate);
 
-async function groupByExpiryStatus(items) {
-  const groups = {
-    expiringToday: [],
-    expiringSoon: [],
-    fresh: [],
-    expired: [],
+  return {
+    ...item._doc,
+    openedExpiryDate,
+    finalExpiryDate,
+    expiryStatus: status,
+    daysLeft: diffDays,
   };
-
-  for (const item of items) {
-    const { status } = await getExpiryStatus(item.expiryDate);
-
-    if (status === "Expiring Today") {
-      groups.expiringToday.push(item);
-    } else if (status === "Expiring Soon") {
-      groups.expiringSoon.push(item);
-    } else if (status === "Fresh") {
-      groups.fresh.push(item);
-    } else {
-      groups.expired.push(item);
-    }
-  }
-
-  return groups;
 }
+
+// async function groupByExpiryStatus(items) {
+//   const groups = {
+//     expiringToday: [],
+//     expiringSoon: [],
+//     fresh: [],
+//     expired: [],
+//   };
+
+//   for (const item of items) {
+//     const { status } = await getExpiryStatus(item.expiryDate);
+
+//     if (status === "Expiring Today") {
+//       groups.expiringToday.push(item);
+//     } else if (status === "Expiring Soon") {
+//       groups.expiringSoon.push(item);
+//     } else if (status === "Fresh") {
+//       groups.fresh.push(item);
+//     } else {
+//       groups.expired.push(item);
+//     }
+//   }
+
+//   return groups;
+// }
 
 // async function getExpiringItems(userId) {
 //   const { today, next7Days } = expiryDateRange();
@@ -99,53 +135,41 @@ async function groupByExpiryStatus(items) {
 // }
 
 async function getExpiringItems(userId) {
-  const { today, next7Days } = expiryDateRange();
+  const items = await pantryModel.find({ user: userId });
 
-  let items = await pantryModel.find({ user: userId });
+  const enriched = await Promise.all(
+    items.map(async (item) => await attachExpiryComputedFields(item))
+  );
 
-  let result = [];
-
-  for (let item of items) {
-    const arr = [];
-
-    // Check original expiry
-    if (item.expiryDate) {
-      const { status, diffDays } = await getExpiryStatus(item.expiryDate);
-
-      if (status === "Expiring Soon" || status === "Expiring Today") {
-        arr.push({
-          ...item._doc,
-          expiryType: "original",
-          daysLeft: diffDays,
-        });
-      }
-    }
-
-    // Check open expiry
-    const { openExpiryDate, status, diffDays } = await getOpenExpiryStatus(item);
-
-    if (openExpiryDate && (status === "Expiring Soon" || status === "Expiring Today")) {
-      arr.push({
-        ...item._doc,
-        expiryType: "opened",
-        daysLeft: diffDays,
-        openExpiryDate,
-      });
-    }
-
-    result.push(...arr);
-  }
-
-  // Sort by nearest expiry
-  return result.sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 5);
+  return enriched
+    .filter(
+      (i) =>
+        i.expiryStatus === "Expiring Today" ||
+        i.expiryStatus === "Expiring Soon"
+    )
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .slice(0, 5);
 }
 
+async function groupByExpiryStatus(items) {
+  const enriched = await Promise.all(
+    items.map(async (i) => await attachExpiryComputedFields(i))
+  );
+
+  return {
+    expiringToday: enriched.filter((i) => i.expiryStatus === "Expiring Today"),
+    expiringSoon: enriched.filter((i) => i.expiryStatus === "Expiring Soon"),
+    fresh: enriched.filter((i) => i.expiryStatus === "Fresh"),
+    expired: enriched.filter((i) => i.expiryStatus === "Expired"),
+  };
+}
 
 module.exports = {
-  getExpiringItems,
   expiryDateRange,
+  computeOpenedExpiryDate,
+  computeFinalExpiryDate,
   getExpiryStatus,
+  attachExpiryComputedFields,
+  getExpiringItems,
   groupByExpiryStatus,
-  computeOpenExpiryDate,
-  getOpenExpiryStatus
 };
