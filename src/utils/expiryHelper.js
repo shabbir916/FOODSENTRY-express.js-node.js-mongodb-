@@ -2,11 +2,11 @@ const pantryModel = require("../models/pantry.model");
 
 function expiryDateRange() {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
 
-  const next7Days = new Date();
-  next7Days.setDate(today.getDate() + 7);
-  next7Days.setHours(23, 59, 59, 999);
+  const next7Days = new Date(today);
+  next7Days.setUTCDate(today.getUTCDate() + 7);
+  next7Days.setUTCHours(0, 0, 0, 0);
 
   return { today, next7Days };
 }
@@ -15,43 +15,64 @@ function computeOpenedExpiryDate(openedOn, useWithinDays) {
   if (!openedOn || !useWithinDays) return null;
 
   const d = new Date(openedOn);
-  d.setDate(d.getDate() + useWithinDays);
-  d.setHours(23, 59, 59, 999);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + useWithinDays);
 
   return d;
 }
 
 function computeFinalExpiryDate(expiryDate, openedExpiryDate) {
   if (expiryDate && openedExpiryDate) {
-    return new Date(
-      Math.min(
-        new Date(expiryDate).getTime(),
-        new Date(openedExpiryDate).getTime()
-      )
-    );
+    const e1 = new Date(expiryDate);
+    const e2 = new Date(openedExpiryDate);
+
+    e1.setUTCHours(0, 0, 0, 0);
+    e2.setUTCHours(0, 0, 0, 0);
+
+    return new Date(Math.min(e1.getTime(), e2.getTime()));
   }
-  return expiryDate || openedExpiryDate || null;
+
+  if (expiryDate) {
+    const d = new Date(expiryDate);
+    d.setUTCHours(0, 0, 0, 0);
+    return d;
+  }
+
+  if (openedExpiryDate) {
+    const d = new Date(openedExpiryDate);
+    d.setUTCHours(0, 0, 0, 0);
+    return d;
+  }
+
+  return null;
 }
 
 async function getExpiryStatus(targetDate) {
   const { today } = expiryDateRange();
-  if (!targetDate) return { status: "No Expiry", diffDays: null };
+
+  if (!targetDate) {
+    return { status: "No Expiry", diffDays: null };
+  }
 
   const d = new Date(targetDate);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCHours(0, 0, 0, 0);
 
-  const diffDays = Math.ceil(
+  let diffDays = Math.floor(
     (d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
 
   let status = "Fresh";
-  if (diffDays < 0) status = "Expired";
-  else if (diffDays === 0) status = "Expiring Today";
-  else if (diffDays >= 1 && diffDays <= 6) status = "Expiring Soon";
 
-  const expiry = diffDays < 0 ? 0 : `in ${diffDays} day(s)`;
+  if (diffDays < 0) {
+    status = "Expired";
+    diffDays = 0;
+  } else if (diffDays === 0) {
+    status = "Expiring Today";
+  } else if (diffDays >= 1 && diffDays <= 6) {
+    status = "Expiring Soon";
+  }
 
-  return { status, diffDays, expiry };
+  return { status, diffDays };
 }
 
 async function attachExpiryComputedFields(item) {
@@ -67,9 +88,6 @@ async function attachExpiryComputedFields(item) {
 
   const { status, diffDays } = await getExpiryStatus(finalExpiryDate);
 
-  let daysLeft = diffDays;
-  if (daysLeft !== null && daysLeft < 0) daysLeft = 0;
-
   const expirySource =
     openedExpiryDate &&
     finalExpiryDate &&
@@ -82,7 +100,7 @@ async function attachExpiryComputedFields(item) {
     openedExpiryDate,
     finalExpiryDate,
     expiryStatus: status,
-    daysLeft,
+    daysLeft: diffDays,
     expirySource,
   };
 }
@@ -91,7 +109,7 @@ async function getExpiringItems(userId) {
   const items = await pantryModel.find({ user: userId });
 
   const enriched = await Promise.all(
-    items.map(async (item) => await attachExpiryComputedFields(item))
+    items.map((item) => attachExpiryComputedFields(item))
   );
 
   return enriched
@@ -100,13 +118,13 @@ async function getExpiringItems(userId) {
         i.expiryStatus === "Expiring Today" ||
         i.expiryStatus === "Expiring Soon"
     )
-    .sort((a, b) => a.expiry - b.expiry)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
     .slice(0, 5);
 }
 
 async function groupByExpiryStatus(items) {
   const enriched = await Promise.all(
-    items.map(async (i) => await attachExpiryComputedFields(i))
+    items.map((i) => attachExpiryComputedFields(i))
   );
 
   return {
