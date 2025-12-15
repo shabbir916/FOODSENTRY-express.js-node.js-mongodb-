@@ -10,7 +10,7 @@ function initSocketServer(httpServer) {
 
   // Events
   io.on("connection", (socket) => {
-    console.log("User connected:", socket.user._id);
+    console.log("User connected:", socket.user?._id);
 
     socket.on("ai-message", async (messagePayload) => {
       const response = await handleAIMessage(socket, messagePayload);

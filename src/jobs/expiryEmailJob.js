@@ -2,6 +2,7 @@ const pantryModel = require("../models/pantry.model");
 const userModel = require("../models/user.model");
 const getExpiringSoonNotifications = require("../utils/expiryNotifications");
 const sendEmail = require("../utils/sendEmail");
+const connectDB = require("../db/db");
 
 async function sendExpiryEmails() {
   const users = await userModel.find({});
@@ -9,13 +10,20 @@ async function sendExpiryEmails() {
   for (const user of users) {
     try {
       const notifications = await getExpiringSoonNotifications(user._id);
-      if (!Array.isArray(notifications) || notifications.length === 0) continue;
+      if (!notifications.length) continue;
 
       const html = `
         <h2>Your Pantry Items Are Expiring Soon</h2>
         <ul>
           ${notifications
-            .map((i) => `<li><b>${i.name}</b> (${i.expiryType === "opened" ? "after opening" : "original expiry"}) — ${i.daysLeft === 0 ? "Expires Today" : `in ${i.daysLeft} day(s)`}</li>`)
+            .map(
+              (i) =>
+                `<li>
+                  <b>${i.name}</b> — ${
+                  i.daysLeft === 0 ? "Expires Today" : `in ${i.daysLeft} day(s)`
+                }
+                </li>`
+            )
             .join("")}
         </ul>
       `;
@@ -24,14 +32,18 @@ async function sendExpiryEmails() {
         to: user.email,
         subject: "FOODSENTRY — Pantry items expiring soon",
         html,
-        text: `You have ${notifications.length} pantry item(s) expiring soon.`,
+        text: `You have ${notifications.length} item(s) expiring soon.`,
       });
 
       for (const n of notifications) {
-        if (n.expiryType === "opened") {
-          await pantryModel.findByIdAndUpdate(n._id, { emailNotifiedOpenExpiry: true });
+        if (n.expirySource === "opened") {
+          await pantryModel.findByIdAndUpdate(n._id, {
+            emailNotifiedOpenExpiry: true,
+          });
         } else {
-          await pantryModel.findByIdAndUpdate(n._id, { emailNotified: true });
+          await pantryModel.findByIdAndUpdate(n._id, {
+            emailNotified: true,
+          });
         }
       }
     } catch (err) {
@@ -41,3 +53,17 @@ async function sendExpiryEmails() {
 }
 
 module.exports = sendExpiryEmails;
+
+if (require.main === module) {
+  connectDB()
+    .then(async () => {
+      console.log("MongoDB connected for manual job run");
+      await sendExpiryEmails();
+      console.log("Expiry email job executed manually");
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error("Expiry email job failed", err);
+      process.exit(1);
+    });
+}

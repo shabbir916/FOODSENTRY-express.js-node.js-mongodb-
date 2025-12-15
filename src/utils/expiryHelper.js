@@ -16,7 +16,7 @@ function computeOpenedExpiryDate(openedOn, useWithinDays) {
 
   const d = new Date(openedOn);
   d.setDate(d.getDate() + useWithinDays);
-  d.setHours(0, 0, 0, 0);
+  d.setHours(23, 59, 59, 999);
 
   return d;
 }
@@ -65,15 +65,25 @@ async function attachExpiryComputedFields(item) {
     openedExpiryDate
   );
 
-  const { status, expiry } = await getExpiryStatus(finalExpiryDate);
+  const { status, diffDays } = await getExpiryStatus(finalExpiryDate);
+
+  let daysLeft = diffDays;
+  if (daysLeft !== null && daysLeft < 0) daysLeft = 0;
+
+  const expirySource =
+    openedExpiryDate &&
+    finalExpiryDate &&
+    openedExpiryDate.getTime() === finalExpiryDate.getTime()
+      ? "opened"
+      : "original";
 
   return {
     ...item._doc,
     openedExpiryDate,
     finalExpiryDate,
     expiryStatus: status,
-    // diffDays,
-    expiry,
+    daysLeft,
+    expirySource,
   };
 }
 

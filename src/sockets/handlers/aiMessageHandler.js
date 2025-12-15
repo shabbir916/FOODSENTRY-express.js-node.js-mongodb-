@@ -13,23 +13,19 @@ async function handleAIMessage(socket, messagePayload) {
 
   const userId = socket.user._id;
 
-  // 1) Chat find or create
   let chat = await chatModel.findOne({ user: userId, isActive: true });
   if (!chat) {
     chat = await chatModel.create({ user: userId });
   }
 
-  // Save user message
   chat.messages.push({
     role: "user",
     content: messagePayload.content,
   });
   await chat.save();
 
-  // 2) STM build
   const stm = buildSTM(chat.messages);
 
-  // 3) Pantry + Expiring + Combined Ingredients
   const ingredientsData = await getIngredients(userId);
   
   let ingredients = ingredientsData.ingredients;
@@ -38,19 +34,16 @@ async function handleAIMessage(socket, messagePayload) {
 
   console.log("Ingredients BEFORE filtering:", ingredients);
 
-  // 4) Detect avoid ingredients
   const avoidItems = detectAvoidItems(messagePayload.content, ingredients);
 
   console.log("Avoid Items Detected:", avoidItems);
 
-  // 5) Remove avoid items
   if (avoidItems.length > 0) {
     ingredients = ingredients.filter((i) => !avoidItems.includes(i));
   }
 
   console.log("Ingredients AFTER filtering:", ingredients);
 
-  // 6) Prompt
   const prompt = buildPrompt({
     avoidItems,
     pantryIngredients,
@@ -58,7 +51,6 @@ async function handleAIMessage(socket, messagePayload) {
     userMessage: messagePayload.content,
   });
 
-  // 7) AI Response
   const response = await aiService.generateRecipesSuggestion({
     stm,
     ingredients,
@@ -66,7 +58,6 @@ async function handleAIMessage(socket, messagePayload) {
     avoidItems,
   });
 
-  // Save AI message
   chat.messages.push({
     role: "model",
     content: response,
@@ -76,7 +67,6 @@ async function handleAIMessage(socket, messagePayload) {
 
   console.log("AI Response:", response);
 
-  // Final object to socket.emit
   return {
     content: response,
     ingredients,

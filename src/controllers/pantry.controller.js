@@ -16,33 +16,29 @@ async function addItem(req, res) {
       category,
       quantity,
       expiryDate,
-      opened, 
+      opened,
       openedOn,
       useWithinDays,
     } = req.body;
 
     const existingItem = await pantryModel.findOne({ name, user: userId });
     if (existingItem) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Item already exists in your pantry",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Item already exists in your pantry",
+      });
     }
 
     const isOpened = opened === true || opened === "true";
     let finalOpenedOn = openedOn ? new Date(openedOn) : null;
-    if (isOpened && !finalOpenedOn) finalOpenedOn = new Date(); 
+    if (isOpened && !finalOpenedOn) finalOpenedOn = new Date();
 
     const finalUseWithinDays = isOpened ? Number(useWithinDays) : null;
     if (isOpened && (!finalUseWithinDays || Number.isNaN(finalUseWithinDays))) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "useWithinDays required when marking item opened.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "useWithinDays required when marking item opened.",
+      });
     }
 
     const openedExpiryDate = computeOpenedExpiryDate(
@@ -67,21 +63,17 @@ async function addItem(req, res) {
       finalExpiryDate,
     });
 
-    return res
-      .status(201)
-      .json({
-        success: true,
-        message: "Item added Successfully in your Pantry",
-        data: item,
-      });
+    return res.status(201).json({
+      success: true,
+      message: "Item added Successfully in your Pantry",
+      data: item,
+    });
   } catch (error) {
     console.error("addItem error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server Error while adding item in your pantry",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Server Error while adding item in your pantry",
+    });
   }
 }
 
@@ -91,6 +83,13 @@ async function fetchItem(req, res) {
     const items = await pantryModel
       .find({ user: userId })
       .sort({ finalExpiryDate: 1 });
+
+    if (!items || items.length === 0) {
+      return res.status(403).json({
+        success: true,
+        message: "No Items Found in your Pantry",
+      });
+    }
 
     const formattedItems = await Promise.all(
       items.map(async (item) => {
@@ -105,12 +104,10 @@ async function fetchItem(req, res) {
     });
   } catch (error) {
     console.error("Fetch Pantry Items Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server Error While Fetching Pantry Items",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Server Error While Fetching Pantry Items",
+    });
   }
 }
 
@@ -141,12 +138,10 @@ async function updatePantryItem(req, res) {
       (k) => !allowedFields.includes(k)
     );
     if (invalidFields.length)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: `Invalid field(s): ${invalidFields.join(", ")}`,
-        });
+      return res.status(400).json({
+        success: false,
+        message: `Invalid field(s): ${invalidFields.join(", ")}`,
+      });
 
     if (
       typeof updates.expiryDate !== "undefined" &&
@@ -166,12 +161,10 @@ async function updatePantryItem(req, res) {
       } else {
         if (!updates.openedOn && !item.openedOn) updates.openedOn = new Date();
         if (!updates.useWithinDays && !item.useWithinDays) {
-          return res
-            .status(400)
-            .json({
-              success: false,
-              message: "useWithinDays required when marking item opened.",
-            });
+          return res.status(400).json({
+            success: false,
+            message: "useWithinDays required when marking item opened.",
+          });
         }
         if (!updates.useWithinDays && item.useWithinDays)
           updates.useWithinDays = item.useWithinDays;
@@ -186,12 +179,10 @@ async function updatePantryItem(req, res) {
       }
       const willBeOpened = updates.opened === true || item.opened === true;
       if (willBeOpened && !updates.useWithinDays && !item.useWithinDays) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "useWithinDays required when marking item opened.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "useWithinDays required when marking item opened.",
+        });
       }
     }
 
@@ -221,21 +212,17 @@ async function updatePantryItem(req, res) {
       { new: true, runValidators: true }
     );
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Item(s) updated successfully",
-        updatedItem,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Item(s) updated successfully",
+      updatedItem,
+    });
   } catch (error) {
     console.error("updatePantryItem error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server Error While Updating Pantry Item(s)",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Server Error While Updating Pantry Item(s)",
+    });
   }
 }
 
@@ -249,29 +236,23 @@ async function deletePantryItem(req, res) {
         .status(404)
         .json({ success: false, message: "Item not found" });
     if (item.user.toString() !== userId.toString())
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Unauthorized! you can not delete this item",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized! you can not delete this item",
+      });
 
     const deletedItem = await pantryModel.findByIdAndDelete(id);
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Item Deleted Successfully from your pantry",
-        deletedItem,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Item Deleted Successfully from your pantry",
+      deletedItem,
+    });
   } catch (error) {
     console.error("deletePantryItem error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server Error While Deleting the Item",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Server Error While Deleting the Item",
+    });
   }
 }
 
@@ -290,13 +271,11 @@ async function markOpen(req, res) {
     const openedOn = item.openedOn || new Date();
     const useWithinDays = item.useWithinDays;
     if (!useWithinDays) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "This item does not have useWithinDays configured. Please update item with useWithinDays before marking open.",
-        });
+      return res.status(400).json({
+        success: false,
+        message:
+          "This item does not have useWithinDays configured. Please update item with useWithinDays before marking open.",
+      });
     }
 
     const openedExpiryDate = computeOpenedExpiryDate(openedOn, useWithinDays);
@@ -333,12 +312,10 @@ async function expiringSoon(req, res) {
       .json({ success: true, message: "Items Expiring Soon", expiringItems });
   } catch (error) {
     console.error("expiringSoon error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server Error While fecthing Expiry Items From your Pantry",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Server Error While fecthing Expiry Items From your Pantry",
+    });
   }
 }
 
@@ -356,12 +333,10 @@ async function expiryStatus(req, res) {
     });
   } catch (error) {
     console.error("Expiry Status Error", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server Error While Fethcing Expiry Status",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Server Error While Fethcing Expiry Status",
+    });
   }
 }
 
@@ -393,5 +368,5 @@ module.exports = {
   expiringSoon,
   expiryStatus,
   getExpiryItemsNotification,
-  markOpen
+  markOpen,
 };
