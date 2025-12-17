@@ -41,7 +41,7 @@ function resetPasswordTemplate({ name, otp, expiresIn }) {
         <tr>
           <td style="padding:28px;">
             <p style="font-size:14px;line-height:1.6;">
-              Hello ${name || "User"},
+              Hello <strong>${name || "User"}</strong>,
             </p>
 
             <p style="font-size:14px;line-height:1.6;color:${theme.textMuted};">

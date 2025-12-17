@@ -3,7 +3,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 const generateOTP = require("../utils/generateOTP");
-const {resetPasswordEmail}  = require("../emails");
+const { resetPasswordEmail } = require("../emails");
+const {WelcomeEmail} = require("../emails");
 
 async function registerUser(req, res) {
   try {
@@ -31,6 +32,18 @@ async function registerUser(req, res) {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
 
     res.cookie("token", token);
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Welcome to FOODSENTRY",
+        html: WelcomeEmail({
+          name: user.username,
+        }),
+      });
+    } catch (emailError) {
+      console.error("Welcome Error Failed:", emailError);
+    }
 
     return res.status(201).json({
       success: true,
@@ -230,7 +243,7 @@ async function forgetPassword(req, res) {
     await sendEmail({
       to: user.email,
       subject: "FOODSENTRY — Password Reset OTP",
-    html: resetPasswordEmail({
+      html: resetPasswordEmail({
         name: user.username,
         otp,
         expiresIn: 5,
