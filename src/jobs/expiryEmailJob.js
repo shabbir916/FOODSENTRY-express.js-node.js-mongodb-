@@ -1,69 +1,43 @@
-const pantryModel = require("../models/pantry.model");
+const mongoose = require("mongoose");
 const userModel = require("../models/user.model");
-const getExpiringSoonNotifications = require("../utils/expiryNotifications");
+const {expiryAlert} = require("../emails/index");
 const sendEmail = require("../utils/sendEmail");
-const connectDB = require("../db/db");
+const getExpiringSoonNotifications = require("../utils/expiryNotifications");
 
 async function sendExpiryEmails() {
-  const users = await userModel.find({});
+  try {
+    console.log("Expiry Email Job started");
 
-  for (const user of users) {
-    try {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGO_URI);
+      console.log("MongoDB connected");
+    }
+
+    const users = await userModel.find({});
+
+    for (const user of users) {
       const notifications = await getExpiringSoonNotifications(user._id);
-      if (!notifications.length) continue;
 
-      const html = `
-        <h2>Your Pantry Items Are Expiring Soon</h2>
-        <ul>
-          ${notifications
-            .map(
-              (i) =>
-                `<li>
-                  <b>${i.name}</b> — ${
-                  i.daysLeft === 0 ? "Expires Today" : `in ${i.daysLeft} day(s)`
-                }
-                </li>`
-            )
-            .join("")}
-        </ul>
-      `;
+      if (!notifications || notifications.length === 0) continue;
+
+      const html = expiryAlert(notifications);
 
       await sendEmail({
         to: user.email,
-        subject: "FOODSENTRY — Pantry items expiring soon",
+        subject: "FOODSENTRY — Pantry Expiry Alert",
         html,
-        text: `You have ${notifications.length} item(s) expiring soon.`,
       });
 
-      for (const n of notifications) {
-        if (n.expirySource === "opened") {
-          await pantryModel.findByIdAndUpdate(n._id, {
-            emailNotifiedOpenExpiry: true,
-          });
-        } else {
-          await pantryModel.findByIdAndUpdate(n._id, {
-            emailNotified: true,
-          });
-        }
-      }
-    } catch (err) {
-      console.error("sendExpiryEmails error for user", user.email, err);
+      console.log(`Email sent to ${user.email}`);
     }
+
+    console.log("Expiry Email Job completed");
+  } catch (error) {
+    console.error("Expiry Email Job failed:", error);
+  } finally {
+    await mongoose.disconnect();
+    console.log("MongoDB disconnected");
   }
 }
 
 module.exports = sendExpiryEmails;
-
-if (require.main === module) {
-  connectDB()
-    .then(async () => {
-      console.log("MongoDB connected for manual job run");
-      await sendExpiryEmails();
-      console.log("Expiry email job executed manually");
-      process.exit(0);
-    })
-    .catch((err) => {
-      console.error("Expiry email job failed", err);
-      process.exit(1);
-    });
-}
