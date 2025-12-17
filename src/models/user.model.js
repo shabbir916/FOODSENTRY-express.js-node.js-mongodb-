@@ -34,6 +34,20 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
     avatar: { type: String, default: null },
+    emailPreferences: {
+      expiryAlerts: {
+        type: Boolean,
+        default: true,
+      },
+      welcomeEmail: {
+        type: Boolean,
+        default: true,
+      },
+      marketing: {
+        type: Boolean,
+        default: false,
+      },
+    },
   },
   { timestamps: true }
 );
