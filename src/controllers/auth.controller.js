@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 const generateOTP = require("../utils/generateOTP");
+const {resetPasswordEmail}  = require("../emails");
 
 async function registerUser(req, res) {
   try {
@@ -228,9 +229,12 @@ async function forgetPassword(req, res) {
     // 2) Send Email
     await sendEmail({
       to: user.email,
-      subject: "Your FOODSENTRY Password Reset OTP",
-      text: `Your OTP is: ${otp}`,
-      html: `<h3>Your OTP is: <b>${otp}</b></h3><p>Valid for 5 minutes</p>`,
+      subject: "FOODSENTRY — Password Reset OTP",
+    html: resetPasswordEmail({
+        name: user.username,
+        otp,
+        expiresIn: 5,
+      }),
     });
 
     return res.status(200).json({
