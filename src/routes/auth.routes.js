@@ -45,6 +45,6 @@ router.post(
   resetPasswordValidator,
   resetPassword
 );
-
+router.patch("/email-preferences",authUser,EmailPreferrenceController)
 
 module.exports = router;
