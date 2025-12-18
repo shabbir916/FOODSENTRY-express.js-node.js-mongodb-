@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const userModel = require("../models/user.model");
-const {expiryAlert} = require("../emails/index");
+const { expiryAlert } = require("../emails/index");
 const sendEmail = require("../utils/sendEmail");
 const getExpiringSoonNotifications = require("../utils/expiryNotifications");
 
@@ -16,6 +16,10 @@ async function sendExpiryEmails() {
     const users = await userModel.find({});
 
     for (const user of users) {
+      if (!user.emailPreferences?.expiryAlerts) {
+        continue;
+      }
+      
       const notifications = await getExpiringSoonNotifications(user._id);
 
       if (!notifications || notifications.length === 0) continue;
