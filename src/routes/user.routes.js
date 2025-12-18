@@ -1,14 +1,17 @@
+const express = require("express");
 const authUser = require("../middleware/auth.middleware");
 const {
   fetchUserProfile,
   updateUserProfile,
   changePassword,
   updateEmailPreferences,
-} = require("../controllers/auth.controller");
+} = require("../controllers/user.controller");
 const {
   userUpdateValidation,
   chnagePasswordValidation,
 } = require("../middleware/userValidator.middleware");
+
+const router = express.Router();
 
 router.get("/user-profile", authUser, fetchUserProfile);
 router.patch(
