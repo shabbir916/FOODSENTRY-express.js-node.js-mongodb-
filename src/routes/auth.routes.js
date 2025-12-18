@@ -9,6 +9,7 @@ const {
   forgetPassword,
   verfiyOTP,
   resetPassword,
+  updateEmailPreferences
 } = require("../controllers/auth.controller");
 const authUser = require("../middleware/auth.middleware");
 
@@ -45,6 +46,6 @@ router.post(
   resetPasswordValidator,
   resetPassword
 );
-router.patch("/email-preferences",authUser,EmailPreferrenceController)
+router.patch("/email-preferences",authUser,updateEmailPreferences)
 
 module.exports = router;

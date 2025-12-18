@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 const generateOTP = require("../utils/generateOTP");
 const { resetPasswordEmail } = require("../emails");
-const {WelcomeEmail} = require("../emails");
+const { WelcomeEmail } = require("../emails");
 
 async function registerUser(req, res) {
   try {
@@ -353,6 +353,47 @@ async function resetPassword(req, res) {
   });
 }
 
+async function updateEmailPreferences(req, res) {
+  try {
+    const userId = req.user?._id;
+    const { expiryAlerts, welcomeEmail, marketing } = req.body;
+
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User Not Found",
+      });
+    }
+
+    if (typeof expiryAlerts === "boolean") {
+      user.emailPreferences.expiryAlerts = expiryAlerts;
+    }
+
+    if (typeof welcomeEmail === "boolean") {
+      user.emailPreferences.welcomeEmail = welcomeEmail;
+    }
+
+    if (typeof marketing === "boolean") {
+      user.emailPreferences.marketing = marketing;
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Email Preferences Updated Successfully",
+      data: user.emailPreferences,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error while updating User Email Preferences",
+    });
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
@@ -363,4 +404,5 @@ module.exports = {
   forgetPassword,
   verfiyOTP,
   resetPassword,
+  updateEmailPreferences,
 };
