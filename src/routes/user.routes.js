@@ -27,3 +27,5 @@ router.patch(
   changePassword
 );
 router.patch("/email-preferences", authUser, updateEmailPreferences);
+
+module.exports = router;
