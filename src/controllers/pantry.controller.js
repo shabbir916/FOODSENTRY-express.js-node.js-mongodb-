@@ -120,6 +120,7 @@ async function updatePantryItem(req, res) {
     const item = await pantryModel.findById(id);
     if (!item)
       return res.status(404).json({ success: false, message: "No item found" });
+
     if (item.user.toString() !== userId.toString())
       return res.status(403).json({ success: false, message: "Unauthorized" });
 
@@ -131,9 +132,8 @@ async function updatePantryItem(req, res) {
       "opened",
       "openedOn",
       "useWithinDays",
-      "emailNotified",
-      "emailNotifiedOpenExpiry",
     ];
+
     const invalidFields = Object.keys(updates).filter(
       (k) => !allowedFields.includes(k)
     );
@@ -148,41 +148,38 @@ async function updatePantryItem(req, res) {
       updates.expiryDate !== null
     ) {
       updates.expiryDate = new Date(updates.expiryDate);
+
+      if (
+        !item.expiryDate ||
+        updates.expiryDate.getTime() !== item.expiryDate.getTime()
+      ) {
+        updates.emailNotified = false;
+        updates.emailNotifiedOpenExpiry = false;
+      }
     }
 
     if (typeof updates.opened !== "undefined") {
       updates.opened = updates.opened === true || updates.opened === "true";
 
-      if (!updates.opened) {
+      if (!updates.opened && item.opened) {
         updates.openedOn = null;
         updates.useWithinDays = null;
         updates.openedExpiryDate = null;
         updates.emailNotifiedOpenExpiry = false;
-      } else {
-        if (!updates.openedOn && !item.openedOn) updates.openedOn = new Date();
+      }
+
+      if (updates.opened && !item.opened) {
+        updates.openedOn = updates.openedOn || new Date();
+        updates.emailNotifiedOpenExpiry = false;
+
         if (!updates.useWithinDays && !item.useWithinDays) {
           return res.status(400).json({
             success: false,
-            message: "useWithinDays required when marking item opened.",
+            message: "useWithinDays required when reopening item.",
           });
         }
-        if (!updates.useWithinDays && item.useWithinDays)
-          updates.useWithinDays = item.useWithinDays;
-      }
-    } else {
-      if (
-        typeof updates.openedOn !== "undefined" &&
-        updates.openedOn !== null &&
-        !item.opened
-      ) {
-        updates.opened = true;
-      }
-      const willBeOpened = updates.opened === true || item.opened === true;
-      if (willBeOpened && !updates.useWithinDays && !item.useWithinDays) {
-        return res.status(400).json({
-          success: false,
-          message: "useWithinDays required when marking item opened.",
-        });
+
+        if (!updates.useWithinDays) updates.useWithinDays = item.useWithinDays;
       }
     }
 
@@ -190,10 +187,12 @@ async function updatePantryItem(req, res) {
       typeof updates.openedOn !== "undefined"
         ? updates.openedOn
         : item.openedOn;
+
     const useWithin =
       typeof updates.useWithinDays !== "undefined"
         ? updates.useWithinDays
         : item.useWithinDays;
+
     const openedExpiryDate = computeOpenedExpiryDate(openedOn, useWithin);
 
     const finalExpiryDate = computeFinalExpiryDate(
@@ -214,14 +213,14 @@ async function updatePantryItem(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: "Item(s) updated successfully",
+      message: "Item updated successfully",
       updatedItem,
     });
   } catch (error) {
     console.error("updatePantryItem error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server Error While Updating Pantry Item(s)",
+      message: "Server Error While Updating Pantry Item",
     });
   }
 }
