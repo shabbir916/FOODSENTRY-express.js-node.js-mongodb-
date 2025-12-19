@@ -7,6 +7,6 @@ const {
 const router = express.Router();
 
 router.get("/google", authLimiter, googleAuthURL);
-router.get("/google/callback", googleCallback);
+router.get("/google/callback", authLimiter, googleCallback);
 
 module.exports = router;

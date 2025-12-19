@@ -10,6 +10,7 @@ const {
   userUpdateValidation,
   chnagePasswordValidation,
 } = require("../middleware/userValidator.middleware");
+const authLimiter = require("../middleware/rateLimiter");
 
 const router = express.Router();
 
@@ -23,6 +24,7 @@ router.patch(
 router.patch(
   "/change-password",
   authUser,
+  authLimiter,
   chnagePasswordValidation,
   changePassword
 );
