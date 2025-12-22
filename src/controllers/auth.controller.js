@@ -20,7 +20,7 @@ async function registerUser(req, res) {
 
     const isExistingUser = await userModel.findOne({ email });
     if (isExistingUser) {
-      return res.status(400).json({ success: false, message: "User already exists" });
+      return res.status(409).json({ success: false, message: "User already exists" });
     }
 
     const hashPassword = await bcrypt.hash(password, 10);
@@ -68,12 +68,12 @@ async function loginUser(req, res) {
 
     const user = await userModel.findOne({ email }).select("+password");
     if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
+      return res.status(401).json({ success: false, message: "User not found" });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ success: false, message: "Invalid Password" });
+      return res.status(401).json({ success: false, message: "Invalid Password" });
     }
 
     const token = jwt.sign(

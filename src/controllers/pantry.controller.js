@@ -85,9 +85,10 @@ async function fetchItem(req, res) {
       .sort({ finalExpiryDate: 1 });
 
     if (!items || items.length === 0) {
-      return res.status(403).json({
+      return res.status(200).json({
         success: true,
         message: "No Items Found in your Pantry",
+        fetchedItem:[],
       });
     }
 

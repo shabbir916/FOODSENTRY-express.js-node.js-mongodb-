@@ -5,12 +5,19 @@ async function fetchUserProfile(req, res) {
   try {
     const userId = req.user?._id;
 
-    const UserProfile = await userModel.findById(userId).select("-password");
+    const userProfile = await userModel.findById(userId).select("-password");
+
+    if (!userProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     return res.status(200).json({
       success: true,
       message: "User profile Fetched successfully",
-      data: UserProfile,
+      data: userProfile,
     });
   } catch (error) {
     res.status(500).json({
@@ -22,7 +29,7 @@ async function fetchUserProfile(req, res) {
 
 async function updateUserProfile(req, res) {
   try {
-    const userId = req.user?._id; 
+    const userId = req.user?._id;
     const updates = req.body;
 
     const allowedFields = ["username", "email"];
