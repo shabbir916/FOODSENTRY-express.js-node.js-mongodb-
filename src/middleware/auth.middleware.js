@@ -8,19 +8,32 @@ async function authUser(req, res, next) {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized access,Please login first",
+        message: "Unauthorized access, Please login first",
       });
     }
 
-    const decoded = await jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await userModel.findById(decoded.id);
 
-    req.user = user;
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
+    req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired, please login again",
+      });
+    }
+
+    return res.status(401).json({
       success: false,
       message: "Unauthorized User, Invalid token",
     });
