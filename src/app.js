@@ -8,6 +8,7 @@ const pantryRoutes = require("../src/routes/pantry.routes");
 const recipeRoutes = require("../src/routes/recipe.routes");
 const dashBoardRoutes = require("../src/routes/dashboard.routes");
 const testRoutes = require("../src/routes/test.Routes");
+const wildCardRoute = require("../src/routes/wildcard.route");
 const app = express();
 
 app.use(express.json());
@@ -20,5 +21,6 @@ app.use("/api/pantry", pantryRoutes);
 app.use("/api/recipe", recipeRoutes);
 app.use("/api/dashboard", dashBoardRoutes);
 app.use("/api", testRoutes);
+app.use(wildCardRoute);
 
 module.exports = app;
