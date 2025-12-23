@@ -1,12 +1,12 @@
-// const pantryModel = require("../../models/pantry.model");
 const chatModel = require("../../models/chat.model");
 const aiService = require("../../services/ai.service");
-// const { getExpiringItems } = require("../../utils/expiryHelper");
 
 const buildSTM = require("../../utils/stmBuilder");
 const getIngredients = require("../../utils/ingredientsManager");
 const detectAvoidItems = require("../../utils/avoidItemDetector");
 const buildPrompt = require("../../utils/promptBuilder");
+
+const AI_ENABLED = process.env.AI_ENABLED === "true";
 
 async function handleAIMessage(socket, messagePayload) {
   console.log("Incoming:", messagePayload);
@@ -27,7 +27,7 @@ async function handleAIMessage(socket, messagePayload) {
   const stm = buildSTM(chat.messages);
 
   const ingredientsData = await getIngredients(userId);
-  
+
   let ingredients = ingredientsData.ingredients;
   const pantryIngredients = ingredientsData.pantryIngredients;
   const expiryIngredients = ingredientsData.expiryIngredients;
@@ -35,7 +35,6 @@ async function handleAIMessage(socket, messagePayload) {
   console.log("Ingredients BEFORE filtering:", ingredients);
 
   const avoidItems = detectAvoidItems(messagePayload.content, ingredients);
-
   console.log("Avoid Items Detected:", avoidItems);
 
   if (avoidItems.length > 0) {
@@ -51,12 +50,55 @@ async function handleAIMessage(socket, messagePayload) {
     userMessage: messagePayload.content,
   });
 
-  const response = await aiService.generateRecipesSuggestion({
-    stm,
-    ingredients,
-    userPrompt: prompt,
-    avoidItems,
-  });
+  if (!AI_ENABLED) {
+    const fallbackMessage =
+      "AI recipe suggestions are temporarily unavailable. We are working on it. Meanwhile, please explore your pantry items.";
+
+    chat.messages.push({
+      role: "system",
+      content: fallbackMessage,
+    });
+
+    await chat.save();
+
+    socket.emit("ai:message", fallbackMessage);
+
+    return {
+      content: fallbackMessage,
+      ingredients,
+      avoidItems,
+      aiDisabled: true,
+    };
+  }
+
+  let response;
+
+  try {
+    response = await aiService.generateRecipesSuggestion({
+      stm,
+      ingredients,
+      userPrompt: prompt,
+      avoidItems,
+    });
+  } catch (error) {
+    console.error("AI Error:", error);
+
+    if (error?.status === 429) {
+      socket.emit(
+        "ai:message",
+        "AI is currently busy due to high usage. Please try again shortly."
+      );
+
+      return {
+        content: null,
+        ingredients,
+        avoidItems,
+        error: "AI_RATE_LIMIT",
+      };
+    }
+
+    throw error;
+  }
 
   chat.messages.push({
     role: "model",
