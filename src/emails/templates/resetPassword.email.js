@@ -82,7 +82,7 @@ function resetPasswordTemplate({ name, otp, expiresIn }) {
                 theme.brand
               };">${expiresIn}</b> <span style="color:${
     theme.brand
-  };">minutes</span>.
+  };">minutes</span>.Do not share this OTP with anyone.
             </p>
 
             <p style="font-size:13px;color:${theme.textMuted};margin-top:20px;">
