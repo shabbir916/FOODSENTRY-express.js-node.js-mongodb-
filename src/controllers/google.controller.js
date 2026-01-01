@@ -51,17 +51,16 @@ async function googleCallback(req, res) {
       { expiresIn: "7d" }
     );
 
+    // ✅ COOKIE SET
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // localhost
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.json({
-      success: true,
-      user,
-    });
+    // ✅ MUST REDIRECT
+    return res.redirect("http://localhost:3000/profile");
   } catch (error) {
     console.error("GOOGLE CALLBACK ERROR:", error);
     return res.status(500).json({
@@ -70,6 +69,7 @@ async function googleCallback(req, res) {
     });
   }
 }
+
 
 module.exports = {
   googleAuthURL,
