@@ -4,6 +4,9 @@ const transporter = require("../config/email");
 const authUser = require("../middleware/auth.middleware");
 const pantryModel = require("../models/pantry.model");
 
+console.log("✅ testRoutes loaded");
+
+
 router.post("/test-mail", authUser, async (req, res) => {
   try {
     const { itemId, type } = req.body;
@@ -44,7 +47,6 @@ router.post("/test-mail", authUser, async (req, res) => {
       message: "Mail sent & DB updated",
       messageId: info.messageId,
     });
-
   } catch (error) {
     console.error("Test Mail Error:", error);
     return res.status(500).json({
@@ -52,6 +54,14 @@ router.post("/test-mail", authUser, async (req, res) => {
       error: error.message,
     });
   }
+});
+
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: "OK",
+    service: "FOODSENTRY API",
+  });
 });
 
 module.exports = router;
