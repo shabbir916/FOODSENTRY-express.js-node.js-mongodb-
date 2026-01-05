@@ -114,15 +114,19 @@ AI_ENABLED=false
 1️⃣ Clone the repository
 ```bash
 git clone https://github.com/shabbir916/FOODSENTRY-express.js-node.js-mongodb-
+```
+
+2️⃣ Navigate to the Project Directory
+```bash
 cd FOODSENTRY
 ```
 
-2️⃣ Install dependencies
+3️⃣ Install dependencies
 ```bash
 npm install
 ```
 
-3️⃣ Start the server
+4️⃣ Start the server
 ```bash
 npx nodemon server.js
 ```
@@ -141,7 +145,7 @@ node src/jobs/index.js
 All APIs are prefixed with /api unless stated otherwise.
 Protected routes require a valid JWT token in the Authorization header.
 
-Authentication & Authorization
+## Authentication & Authorization
 
 | Method | Endpoint                | Description                       |
 | ------ | ----------------------- | --------------------------------- |
@@ -152,14 +156,14 @@ Authentication & Authorization
 | GET    | `/auth/google`          | Google OAuth login                |
 | GET    | `/auth/google/callback` | Google OAuth callback             |
 
-User Management
+## User Management
 
 | Method | Endpoint                   | Description                              |
 | ------ | -------------------------- | ---------------------------------------- |
 | GET    | `/api/user/user-profile`   | Get logged-in user profile *(Protected)* |
 | PATCH  | `/api/user/update-profile` | Update user profile *(Protected)*        |
 
-Pantry Management
+## Pantry Management
 
 | Method | Endpoint                       | Description                        |
 | ------ | ------------------------------ | ---------------------------------- |
@@ -168,13 +172,25 @@ Pantry Management
 | PUT    | `/api/pantry/update-item/:id`  | Update pantry item *(Protected)*   |
 | DELETE | `/api/pantry/delete-item/:id`  | Delete pantry item *(Protected)*   |
 
-Recipes Suggestions
+## Recipes Suggestions
 
 | Method | Endpoint                  | Description                                                |
 | ------ | ------------------------- | ---------------------------------------------------------- |
 | GET    | `/api/recipe/suggestions` | Get recipe suggestions based on pantry items *(Protected)* |
 
+## test Route
 
+Use the following route to verify that the backend is running correctly.
+
+| Method | Endpoint        | Description                     |
+| ------ | --------------- | ------------------------------- |
+| GET    | `/api/health`   | Backend health status check     |
+
+
+## Author
+
+**Shabbir Sadriwala**  
+Backend Developer  
 
 
 
