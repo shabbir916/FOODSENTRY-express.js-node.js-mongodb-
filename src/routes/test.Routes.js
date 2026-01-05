@@ -4,9 +4,6 @@ const transporter = require("../config/email");
 const authUser = require("../middleware/auth.middleware");
 const pantryModel = require("../models/pantry.model");
 
-console.log("✅ testRoutes loaded");
-
-
 router.post("/test-mail", authUser, async (req, res) => {
   try {
     const { itemId, type } = req.body;

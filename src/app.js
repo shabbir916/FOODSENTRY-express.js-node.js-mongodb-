@@ -1,5 +1,3 @@
-console.log("✅ app.js loaded");
-
 const express = require("express");
 const cookieParser = require("cookie-parser");
 
@@ -26,3 +24,5 @@ app.use("/api", testRoutes);
 app.use(wildCardRoute);
 
 module.exports = app;
+
+
