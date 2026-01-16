@@ -93,6 +93,7 @@ async function loginUser(req, res) {
       data: user,
     });
   } catch (error) {
+    console.error("login error",error);
     return res.status(500).json({
       success: false,
       message: "Server Error While logging-in User",

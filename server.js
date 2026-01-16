@@ -5,7 +5,7 @@ const app = require("./src/app");
 const connectDB = require("./src/db/db");
 const initSocketServer = require("./src/sockets/socket.server");
 
-const PORT = process.env.PORT || 10000; // Render injects PORT automatically
+const PORT = process.env.PORT || 10000; 
 
 const httpServer = http.createServer(app);
 
