@@ -27,5 +27,5 @@ router.post(
   resetPasswordValidator,
   resetPassword
 );
-
+  
 module.exports = router;
