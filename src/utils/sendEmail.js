@@ -24,7 +24,7 @@ const brevoClient = require("../config/email");
 
 async function sendEmail({ to, subject, html }) {
   try {
-    const response = await brevoClient.sendTransacEmail({
+    const sendSmtpEmail = {
       sender: {
         email: process.env.BREVO_SENDER_EMAIL,
         name: process.env.BREVO_SENDER_NAME,
@@ -32,16 +32,21 @@ async function sendEmail({ to, subject, html }) {
       to: [{ email: to }],
       subject,
       htmlContent: html,
-    });
+    };
 
-    console.log("Email sent:", response.messageId);
+    const response = await brevoClient.sendTransacEmail(sendSmtpEmail);
+
+    console.log("Brevo Email Sent:", response.messageId || response);
     return response;
   } catch (error) {
-    console.error("Brevo Email Error:", error.response?.body || error);
+    console.error(
+      "Brevo Email Error:",
+      error.response?.data || error.message
+    );
     throw error;
   }
 }
 
-
 module.exports = sendEmail;
+
 
