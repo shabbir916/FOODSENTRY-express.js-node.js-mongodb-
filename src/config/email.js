@@ -1,9 +1,20 @@
-const brevo = require("@getbrevo/brevo");
+require("dotenv").config();
+const nodemailer = require("nodemailer");
 
-const client = brevo.ApiClient.instance;
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_APP_PASSWORD,
+  },
+});
 
-client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("Error connecting to email server:", error);
+  } else {
+    console.log("Successfully connected to email Server:", success);
+  }
+});
 
-const transactionalEmailApi = new brevo.TransactionalEmailsApi();
-
-module.exports = transactionalEmailApi;
+module.exports = transporter;
