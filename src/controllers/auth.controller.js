@@ -155,7 +155,7 @@ async function forgetPassword(req, res) {
     console.log("Forget Password Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server Error while sending OTP",
+      message: error.message,
     });
   }
 }
